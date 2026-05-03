@@ -87,10 +87,35 @@ function piModel(baseURL: string, fetchImpl?: typeof fetch): LanguageModel {
   });
 }
 
+function piRelayVpc(env: Env): Fetcher | undefined {
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- optional binding lookup; callers handle undefined.
+  return (env as unknown as { PI_RELAY_VPC?: Fetcher }).PI_RELAY_VPC;
+}
+
+const friendlyLocalPiFetch: typeof fetch = async (input, init) => {
+  try {
+    return await fetch(input, init);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `MODEL_PROVIDER_UNREACHABLE: pi-local requires aisdk-pi-proxy at http://127.0.0.1:8788/v1. This is a model endpoint, not an MCP server. ${detail}`,
+      { cause: err },
+    );
+  }
+};
+
 const REGISTRY: Record<AiProvider, (env: Env) => LanguageModel> = {
   kimi: (env) => createWorkersAI({ binding: env.AI }).chat(env.MODEL_ID),
 
-  "pi-local": () => piModel("http://127.0.0.1:8788/v1"),
+  "pi-local": (env) => {
+    // A persisted `pi-local` preference can follow a user into the deployed
+    // Worker, where 127.0.0.1 is the Worker isolate, not the developer's
+    // machine. If the VPC relay exists, use the production path instead;
+    // otherwise fail with a model-provider error that won't be mistaken for
+    // an MCP server connection problem.
+    if (piRelayVpc(env)) return REGISTRY["pi-prod"](env);
+    return piModel("http://127.0.0.1:8788/v1", friendlyLocalPiFetch);
+  },
 
   // Reach the proxy through the Workers VPC binding — the only network path
   // from a deployed Worker. There's no public ingress and no bearer token;
@@ -105,9 +130,7 @@ const REGISTRY: Record<AiProvider, (env: Env) => LanguageModel> = {
   // (ChatPage) can match on the sentinel and surface a switch-to-Kimi CTA
   // instead of a generic stream failure.
   "pi-prod": (env) => {
-    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- optional binding lookup; throws below if absent.
-    const envWithVpc = env as unknown as { PI_RELAY_VPC?: Fetcher };
-    const vpc = envWithVpc.PI_RELAY_VPC;
+    const vpc = piRelayVpc(env);
     if (!vpc) {
       throw new Error(
         "VPC_UNREACHABLE: pi-prod selected but PI_RELAY_VPC binding is not configured (set PI_RELAY_VPC_SERVICE_ID in .env)",
