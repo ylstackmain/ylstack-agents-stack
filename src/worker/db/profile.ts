@@ -191,6 +191,9 @@ const PREF_KEYS = [
   "ai_provider",
   "telegram_bot_token",
   "telegram_whitelist",
+  "exa_api_key",
+  "openrouter_api_key",
+  "openrouter_model_id",
 ] as const;
 type PrefKey = (typeof PREF_KEYS)[number];
 
@@ -413,6 +416,33 @@ export async function readPreferences(db: D1Database): Promise<Preferences> {
     }
   }
   return out;
+}
+
+/**
+ * Read a configuration value from D1 preferences with fallback to env var.
+ * This allows users to manage API keys and other configuration from the
+ * Cloudflare dashboard (as secrets) or the app's own Settings UI (as D1 prefs).
+ *
+ * Order of precedence:
+ *   1. D1 preference (set via app Settings UI)
+ *   2. Environment variable (set via `wrangler secret put` or dashboard)
+ *   3. Default value
+ */
+export async function readConfigWithEnvFallback(
+  db: D1Database,
+  prefKey: PrefKey,
+  env: Cloudflare.Env,
+  envKey: string,
+  defaultValue = "",
+): Promise<string> {
+  const prefs = await readPreferences(db);
+  const fromPref = prefs[prefKey];
+  if (fromPref) return fromPref;
+
+  const fromEnv = (env as Record<string, string>)[envKey];
+  if (fromEnv) return fromEnv;
+
+  return defaultValue;
 }
 
 export async function writePreference(

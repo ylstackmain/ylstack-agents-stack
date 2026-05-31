@@ -43,10 +43,6 @@
     "MODEL_ID": "@cf/moonshotai/kimi-k2.6",
     "TEAM_DOMAIN": "",
     "POLICY_AUD": "",
-    "TELEGRAM_BOT_TOKEN": "",
-    "EXA_API_KEY": "",
-    "OPENROUTER_API_KEY": "",
-    "OPENROUTER_MODEL_ID": "",
   },
   "observability": {
     "enabled": true,
