@@ -1,7 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "downy",
-  "main": "dist/server/server.js",
+  "main": ".output/server/index.mjs",
+  "assets": {
+    "directory": ".output/public",
+    "binding": "ASSETS"
+  },
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [

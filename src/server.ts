@@ -163,6 +163,12 @@ export default {
     const agentResponse = await routeAgentRequest(request, env);
     if (agentResponse) return agentResponse;
 
+    // Try serving static assets from the ASSETS binding (Cloudflare Workers Assets)
+    if ((env as any).ASSETS) {
+      const assetResponse = await (env as any).ASSETS.fetch(request);
+      if (assetResponse.status !== 404) return assetResponse;
+    }
+
     return tanstackEntry.fetch(request);
   },
 };
