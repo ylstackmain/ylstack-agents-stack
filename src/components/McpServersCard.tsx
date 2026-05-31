@@ -47,7 +47,7 @@ export default function McpServersCard() {
   const agent = useAgent({
     agent: "DownyAgent",
     name: slug,
-    protocol: window.location.protocol === "https:" ? "wss" : "ws",
+    protocol: typeof window !== "undefined" && window.location.protocol === "https:" ? "wss" : "ws",
   });
   useMcpServersLiveSync(agent, slug);
   const { data: servers, error: queryError } = useMcpServers(slug);

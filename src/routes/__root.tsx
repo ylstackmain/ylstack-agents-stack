@@ -1,4 +1,5 @@
 import {
+  ClientOnly,
   HeadContent,
   Scripts,
   createRootRoute,
@@ -62,7 +63,9 @@ function RootDocument({ children }: { children: ReactNode }) {
             <AgentRouteGuard />
             <Header />
             <div className="flex flex-1 min-h-0">
-              <ClientOnlyAgentPanel />
+              <ClientOnly fallback={<div className="md:w-72 shrink-0 hidden md:block" />}>
+                <ClientOnlyAgentPanel />
+              </ClientOnly>
               <div className="flex-1 md:h-full md:overflow-y-auto">
                 {children}
               </div>
@@ -91,10 +94,11 @@ function RootDocument({ children }: { children: ReactNode }) {
 
 function ClientOnlyAgentPanel() {
   const slug = useCurrentAgentSlug();
+  const protocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss" : "ws";
   const agent = useAgent({
     agent: "DownyAgent",
     name: `${slug}:default`,
-    protocol: window.location.protocol === "https:" ? "wss" : "ws",
+    protocol,
   });
 
   // We only want the panel on desktop or when mobile is triggered.
