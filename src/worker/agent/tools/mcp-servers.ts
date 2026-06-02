@@ -52,7 +52,7 @@ async function probeMcpEndpoint(
     params: {
       protocolVersion: "2024-11-05",
       capabilities: {},
-      clientInfo: { name: "downy-probe", version: "0.0.0" },
+      clientInfo: { name: "ylstack-agents-stack-probe", version: "0.0.0" },
     },
   };
   try {

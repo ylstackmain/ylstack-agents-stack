@@ -48,6 +48,7 @@ import {
   createReadUserProfileTool,
   createWriteUserProfileTool,
 } from "./tools/user-profile";
+import { createSystemControlTools } from "./tools/system-control";
 import { listSkills } from "./skills/loader";
 import { type SkillEntry } from "./skills/types";
 import { createSpawnBackgroundTaskTool } from "./tools/spawn-background-task";
@@ -66,7 +67,7 @@ import {
 } from "./mcp-reconnect";
 import { getAgent, listAgents, readPreferences } from "../db/profile";
 
-const BOOTSTRAP_SEEDED_KEY = "downy:bootstrap-seeded";
+const BOOTSTRAP_SEEDED_KEY = "YLStack:bootstrap-seeded";
 
 const backgroundTaskKey = (id: string) => `background_task:${id}`;
 const MCP_SERVER_KEY_PREFIX = "mcp_server:";
@@ -128,6 +129,9 @@ export class DownyAgent extends Think {
       connect_mcp_server: createConnectMcpServerTool({ agent: this }),
       list_mcp_servers: createListMcpServersTool({ agent: this }),
       disconnect_mcp_server: createDisconnectMcpServerTool({ agent: this }),
+      ...(this.slug === "default"
+        ? createSystemControlTools({ agent: this, env: this.env })
+        : {}),
     };
   }
 
@@ -221,11 +225,67 @@ export class DownyAgent extends Think {
       this.ctx.storage.get<ActivePlan>(ACTIVE_PLAN_KEY).then((v) => v ?? null),
     ]);
     const peers = allAgents.filter((a) => a.slug !== this.slug);
+
+    // Auto-generate session title from the first user message if it is still "New Chat"
+    if (this.sessionId !== "default" && ctx.messages.length > 0) {
+      try {
+        const sessionRow = await this.env.DB.prepare(
+          "SELECT title FROM sessions WHERE id = ?",
+        )
+          .bind(this.sessionId)
+          .first<{ title: string }>();
+        if (sessionRow && sessionRow.title === "New Chat") {
+          const userMsg = ctx.messages.find(
+            (m: any) =>
+              m.role === "user" && !isSyntheticUserMessage(m.metadata),
+          );
+          if (userMsg) {
+            let firstText = "";
+            if (Array.isArray((userMsg as any).parts)) {
+              firstText = (userMsg as any).parts
+                .filter((p: any) => p.type === "text")
+                .map((p: any) => p.text)
+                .join(" ");
+            } else if (typeof (userMsg as any).content === "string") {
+              firstText = (userMsg as any).content;
+            }
+
+            if (firstText.trim()) {
+              const cleanText = firstText.replace(/[#*`_[\]]/g, "").trim();
+              const words = cleanText.split(/\s+/).slice(0, 5).join(" ");
+              let newTitle = words;
+              if (cleanText.split(/\s+/).length > 5 || cleanText.length > 30) {
+                newTitle = words.slice(0, 27) + "...";
+              }
+              if (newTitle) {
+                await this.env.DB.prepare(
+                  "UPDATE sessions SET title = ? WHERE id = ?",
+                )
+                  .bind(newTitle, this.sessionId)
+                  .run();
+
+                this.broadcast(
+                  JSON.stringify({
+                    type: "session_renamed",
+                    sessionId: this.sessionId,
+                    title: newTitle,
+                  }),
+                );
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to auto-rename session", err);
+      }
+    }
+
     const system = await buildSystemPrompt(
       this.workspace,
       userFile.content,
       peers,
       latestPlan,
+      this.slug === "default",
     );
     const mcpTools = toolRegistry.buildMcpProxyTools({
       descriptors: listMcpToolDescriptors(this.mcp),

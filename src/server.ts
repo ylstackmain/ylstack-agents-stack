@@ -104,9 +104,15 @@ export default {
     const agentPageRedirect = await redirectInvalidAgentPage(request, env);
     if (agentPageRedirect) return agentPageRedirect;
 
+    // Handle agent sessions before general agents handler (route ordering)
+    if (url.pathname.match(/^\/api\/agents\/[^/]+\/sessions$/)) {
+      return handleEnhancedRequest(request, env);
+    }
+
     if (
       url.pathname === "/api/agents" ||
-      url.pathname.startsWith("/api/agents/")
+      (url.pathname.startsWith("/api/agents/") &&
+        !url.pathname.match(/^\/api\/agents\/[^/]+\/sessions$/))
     ) {
       return handleAgentsRequest(request, env);
     }
@@ -156,8 +162,7 @@ export default {
       url.pathname.startsWith("/api/sessions/") ||
       url.pathname === "/api/telegram/webhook" ||
       url.pathname === "/api/telegram/setup" ||
-      url.pathname === "/api/telegram/test" ||
-      url.pathname.match(/^\/api\/agents\/[^/]+\/sessions$/)
+      url.pathname === "/api/telegram/test"
     ) {
       return handleEnhancedRequest(request, env);
     }

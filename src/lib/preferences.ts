@@ -22,11 +22,11 @@ import { persistPreference } from "./preferences-sync";
 // previous device (or stale local value) is ignored — new default is OFF
 // (reasoning blocks render collapsed). Users who want it expanded re-opt in
 // via the Settings toggle, which writes to the v2 key.
-const SHOW_THINKING_KEY = "downy:show-thinking-v2";
-const AI_PROVIDER_KEY = "downy:ai-provider";
-const TELEGRAM_TOKEN_KEY = "downy:telegram-token";
-const TELEGRAM_WHITELIST_KEY = "downy:telegram-whitelist";
-const CHANGE_EVENT = "downy:preference-change";
+const SHOW_THINKING_KEY = "ylstack-agents-stack:show-thinking-v2";
+const AI_PROVIDER_KEY = "ylstack-agents-stack:ai-provider";
+const TELEGRAM_TOKEN_KEY = "ylstack-agents-stack:telegram-token";
+const TELEGRAM_WHITELIST_KEY = "ylstack-agents-stack:telegram-whitelist";
+const CHANGE_EVENT = "ylstack-agents-stack:preference-change";
 
 function readBool(key: string): boolean {
   if (typeof window === "undefined") return false;

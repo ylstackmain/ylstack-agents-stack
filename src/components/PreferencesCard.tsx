@@ -1,12 +1,11 @@
 import {
   AI_PROVIDERS,
   isAiProvider,
-  type AiProvider,
 } from "../lib/ai-providers";
 import { useState } from "react";
 import {
-  useAiProvider,
   useShowThinking,
+  useAiProvider,
   useTelegramBotToken,
   useTelegramWhitelist,
 } from "../lib/preferences";
@@ -14,11 +13,10 @@ import { useProviders } from "../lib/queries";
 import { setupTelegramWebhook, testTelegramBot } from "../lib/api-client";
 import { alertDialog } from "./ui/dialog";
 
-const PROVIDER_LABELS: Record<AiProvider, string> = {
+const BUILTIN_PROVIDER_LABELS: Record<string, string> = {
   kimi: "Kimi K2.6 (Workers AI)",
-  "pi-local": "Pi proxy (local)",
-  "pi-prod": "Pi proxy (prod)",
-  openrouter: "OpenRouter",
+  "pi-local": "Pi Proxy (local)",
+  "pi-prod": "Pi Proxy (prod)",
 };
 
 export default function PreferencesCard() {
@@ -26,8 +24,7 @@ export default function PreferencesCard() {
   const [aiProvider, setAiProvider] = useAiProvider();
   const [telegramToken, setTelegramToken] = useTelegramBotToken();
   const [telegramWhitelist, setTelegramWhitelist] = useTelegramWhitelist();
-  const { data: providersData } = useProviders();
-  const managedProviders = (providersData as any)?.providers || [];
+  const { data: managedProviders = [] } = useProviders();
 
   const [busy, setBusy] = useState(false);
 
@@ -89,6 +86,17 @@ export default function PreferencesCard() {
     }
   }
 
+  const isManagedProvider = (provider: string): boolean => {
+    return provider.includes("-") && provider.length > 20;
+  };
+
+  const getProviderLabel = (provider: string): string => {
+    if (isManagedProvider(provider)) {
+      return `Custom: ${provider.slice(0, 8)}...`;
+    }
+    return BUILTIN_PROVIDER_LABELS[provider] || provider;
+  };
+
   return (
     <div className="space-y-6">
       <section className="card card-compact border border-base-300 bg-base-100 shadow-sm">
@@ -125,7 +133,7 @@ export default function PreferencesCard() {
               <optgroup label="Built-in Providers">
                 {AI_PROVIDERS.map((p) => (
                   <option key={p} value={p}>
-                    {PROVIDER_LABELS[p]}
+                    {BUILTIN_PROVIDER_LABELS[p] || p}
                   </option>
                 ))}
               </optgroup>
@@ -139,6 +147,9 @@ export default function PreferencesCard() {
                 </optgroup>
               )}
             </select>
+            <span className="text-[10px] opacity-50">
+              Current: {getProviderLabel(aiProvider)}
+            </span>
           </label>
         </div>
       </section>

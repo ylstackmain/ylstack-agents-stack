@@ -39,7 +39,7 @@ export default function Header() {
             className="flex items-center gap-2 px-2 py-1 text-base font-semibold no-underline"
           >
             <span className="size-2 rounded-full bg-primary" />
-            Downy
+            YLStack
           </Link>
         )}
       </div>

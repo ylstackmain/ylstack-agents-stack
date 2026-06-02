@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "your-project-name",
+    "isMonorepo": false,
+    "monorepoType": null,
+    "subProjects": [],
+    "hasGit": true,
+    "projectTypes": [
+      {
+        "name": "nodejs",
+        "framework": "express",
+        "config": "package.json"
+      }
+    ]
+  },
+  "backup": {
+    "include": [],
+    "exclude": [],
+    "excludeSubProjects": null,
+    "includeSubProjects": []
+  },
+  "history": {
+    "maxBackups": 100
+  },
+  "createdAt": "2026-06-01T18:30:05.410Z",
+  "updatedAt": "2026-06-01T18:30:05.410Z"
+}

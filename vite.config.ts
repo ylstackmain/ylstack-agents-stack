@@ -6,6 +6,11 @@ import tailwindcss from "@tailwindcss/vite";
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
+  build: {
+    rollupOptions: {
+      preserveEntrySignatures: "strict",
+    },
+  },
   plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact()],
 });
 export default config;

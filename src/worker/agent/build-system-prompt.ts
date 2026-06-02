@@ -131,6 +131,7 @@ export async function buildSystemPrompt(
   userFileContent: string,
   peers: readonly AgentRecord[] = [],
   latestPlan: ActivePlan | null = null,
+  isLeadAgent: boolean = false,
 ): Promise<string> {
   const [soul, identity, memory, bootstrap, skills] = await Promise.all([
     resolveCoreFile(workspace, metaFor(SOUL_PATH)),
@@ -147,6 +148,21 @@ export async function buildSystemPrompt(
     `## USER.md\n${userFileContent.trim()}`,
     `## MEMORY.md\n${memory.content.trim()}`,
   ];
+
+  if (isLeadAgent) {
+    sections.unshift(
+      `## LEAD AGENT SYSTEM INSTRUCTIONS
+You are the default Lead Agent of the ylstack agents ecosystem. Your primary responsibility is managing the whole agent ecosystem, including creating, archiving, configuring, and coordinating other sub-agents.
+
+You have access to master system control tools:
+- \`create_agent\`: Spawn a new sub-agent.
+- \`archive_agent\`: Archive (delete) a sub-agent.
+- \`write_peer_core_file\`: Dynamically edit a peer agent's core files (\`identity/SOUL.md\`, \`identity/IDENTITY.md\`) to shape their personality, identity, and system instructions.
+- \`write_peer_skill\`: Dynamically create or update skills (instruction packs/tools) for a peer agent.
+
+Orchestrate the ecosystem dynamically. If the user's task requires specialized expertise or is complex, spawn a sub-agent, configure their instructions/skills, and collaborate together to solve the user's problems. You are in complete control of the system.`,
+    );
+  }
 
   const skillsSection = buildSkillsPromptSection(skills);
   if (skillsSection) sections.push(skillsSection);

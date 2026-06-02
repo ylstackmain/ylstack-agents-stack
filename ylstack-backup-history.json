@@ -1,0 +1,22 @@
+{
+  "backups": [
+    {
+      "id": "mpvjoai2",
+      "timestamp": "2026-06-01T18:31:06.026Z",
+      "path": "D:\\dev_workspace\\backups\\ylstack-agents-stack\\ylstack-agents-stack-main-2026-06-01_1.zip",
+      "filename": "ylstack-agents-stack-main-2026-06-01_1.zip",
+      "size": 16652356,
+      "sizeFormatted": "15.88 MB",
+      "fileCount": 225,
+      "projectName": "ylstack-agents-stack",
+      "projectTypes": [
+        {
+          "name": "typescript",
+          "framework": "vite",
+          "config": "package.json"
+        }
+      ],
+      "branch": "main"
+    }
+  ]
+}

@@ -25,7 +25,7 @@ function IndexRedirect() {
     <main className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4 text-center">
       <h1 className="text-2xl font-bold">No agents yet</h1>
       <p className="mt-2 mb-6 text-sm text-base-content/65">
-        Create your first agent to get started with Downy.
+        Create your first agent to get started with ylstack-agents-stack.
       </p>
 
       {showCreate ? (
@@ -33,10 +33,7 @@ function IndexRedirect() {
           <AgentSelector />
         </div>
       ) : (
-        <button
-          onClick={() => setShowCreate(true)}
-          className="btn btn-primary"
-        >
+        <button onClick={() => setShowCreate(true)} className="btn btn-primary">
           Create First Agent
         </button>
       )}

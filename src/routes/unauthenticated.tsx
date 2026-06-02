@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
 
-const README_HREF = "https://github.com/bensenescu/downy#cloudflare-access";
+const README_HREF =
+  "https://github.com/bensenescu/ylstack-agents-stack#cloudflare-access";
 
 export const Route = createFileRoute("/unauthenticated")({
   component: UnauthenticatedPage,

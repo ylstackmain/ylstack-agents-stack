@@ -17,7 +17,11 @@ import ExaSetupWarning from "../components/ExaSetupWarning";
 import Header from "../components/Header";
 import AgentPanel from "../components/chat/AgentPanel";
 import { DialogHost } from "../components/ui/dialog";
-import { agentSlugFromPath, useAgentsQuery, useCurrentAgentSlug } from "../lib/agents";
+import {
+  agentSlugFromPath,
+  useAgentsQuery,
+  useCurrentAgentSlug,
+} from "../lib/agents";
 import { hydratePreferencesFromServer } from "../lib/preferences-sync";
 import { queryClient } from "../lib/query-client";
 import { THEMES } from "../lib/theme";
@@ -27,19 +31,31 @@ import appCss from "../styles.css?url";
 // Inline preload — runs before React renders to avoid a flash of the default
 // theme. Keep in sync with src/lib/theme.ts (storage keys + naming convention).
 // The allowlist is generated at build time from THEMES so a removed/renamed
-// theme in localStorage falls back to downy instead of setting a
+// theme in localStorage falls back to ylstack-agents-stack instead of setting a
 // data-theme that has no matching CSS rule.
 const VALID_IDS_JSON = JSON.stringify(THEMES.map((t) => t.id));
-const THEME_INIT_SCRIPT = `(function(){try{var valid=${VALID_IDS_JSON};var id=window.localStorage.getItem('downy:theme-id');if(!id||valid.indexOf(id)===-1)id='downy';var scheme=window.localStorage.getItem('downy:color-scheme');if(scheme!=='light'&&scheme!=='dark')scheme='system';var resolved=scheme==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):scheme;var root=document.documentElement;root.setAttribute('data-theme',id+'-'+resolved);root.style.colorScheme=resolved;}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var valid=${VALID_IDS_JSON};var id=window.localStorage.getItem('ylstack-agents-stack:theme-id');if(!id||valid.indexOf(id)===-1)id='ylstack-agents-stack';var scheme=window.localStorage.getItem('ylstack-agents-stack:color-scheme');if(scheme!=='light'&&scheme!=='dark')scheme='system';var resolved=scheme==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):scheme;var root=document.documentElement;root.setAttribute('data-theme',id+'-'+resolved);root.style.colorScheme=resolved;}catch(e){}})();`;
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Downy" },
+      { title: "YLStack Agent" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap",
+      },
+    ],
   }),
   shellComponent: RootDocument,
 });
@@ -63,7 +79,9 @@ function RootDocument({ children }: { children: ReactNode }) {
             <AgentRouteGuard />
             <Header />
             <div className="flex flex-1 min-h-0">
-              <ClientOnly fallback={<div className="md:w-72 shrink-0 hidden md:block" />}>
+              <ClientOnly
+                fallback={<div className="md:w-72 shrink-0 hidden md:block" />}
+              >
                 <ClientOnlyAgentPanel />
               </ClientOnly>
               <div className="flex-1 md:h-full md:overflow-y-auto">
@@ -94,7 +112,10 @@ function RootDocument({ children }: { children: ReactNode }) {
 
 function ClientOnlyAgentPanel() {
   const slug = useCurrentAgentSlug();
-  const protocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss" : "ws";
+  const protocol =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? "wss"
+      : "ws";
   const agent = useAgent({
     agent: "DownyAgent",
     name: `${slug}:default`,

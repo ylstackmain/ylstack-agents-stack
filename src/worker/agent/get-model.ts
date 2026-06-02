@@ -8,6 +8,7 @@ import {
   type LanguageModelMiddleware,
 } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
+import { fallback } from "./fallback";
 
 import {
   DEFAULT_AI_PROVIDER,
@@ -86,7 +87,20 @@ const friendlyLocalPiFetch: typeof fetch = async (input, init) => {
 
 const BUILTIN_REGISTRY: Record<string, (env: Cloudflare.Env) => LanguageModel> =
   {
-    kimi: (env) => createWorkersAI({ binding: env.AI }).chat(env.MODEL_ID),
+    kimi: (env) => {
+      const primaryModel = env.MODEL_ID || "@cf/meta/llama-3.1-8b-instruct";
+      const fallbackModels = [
+        primaryModel,
+        "@cf/meta/llama-3.1-8b-instruct",
+        "@cf/meta/llama-3-8b-instruct",
+        "@cf/qwen/qwen1.5-14b-chat",
+      ];
+      const uniqueModels = [...new Set(fallbackModels)];
+      const chatModels = uniqueModels.map((m) =>
+        createWorkersAI({ binding: env.AI }).chat(m),
+      );
+      return fallback(chatModels);
+    },
 
     "pi-local": (env) => {
       if (piRelayVpc(env)) return BUILTIN_REGISTRY["pi-prod"](env);
@@ -125,8 +139,8 @@ const BUILTIN_REGISTRY: Record<string, (env: Cloudflare.Env) => LanguageModel> =
     },
 
     openrouter: (env) => {
-      const apiKey = env.OPENROUTER_API_KEY;
-      const modelId = env.OPENROUTER_MODEL_ID;
+      const apiKey = (env as any).OPENROUTER_API_KEY;
+      const modelId = (env as any).OPENROUTER_MODEL_ID;
       if (!apiKey || !modelId) {
         throw new Error(
           "openrouter selected but OPENROUTER_API_KEY or OPENROUTER_MODEL_ID is not set",
@@ -140,13 +154,22 @@ export async function getModelFor(
   env: Cloudflare.Env,
   providerId: AiProvider,
 ): Promise<LanguageModel> {
-  // 1. Try to find a managed provider in D1 first (allows overriding built-ins)
+  // 1. Try to find a managed provider in D1 by ID first
   const config = await getAiProvider(env.DB, providerId);
-  
+
   if (config) {
     if (config.type === "workers-ai") {
+      const models = (config.modelId || env.MODEL_ID)
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean);
+      if (models.length > 1) {
+        return fallback(
+          models.map((m) => createWorkersAI({ binding: env.AI }).chat(m)),
+        );
+      }
       return createWorkersAI({ binding: env.AI }).chat(
-        config.modelId || env.MODEL_ID,
+        models[0] || env.MODEL_ID,
       );
     }
     return createModelFromConfig(config);
@@ -163,35 +186,41 @@ export async function getModelFor(
 function createModelFromConfig(config: AiProviderRecord): LanguageModel {
   const { type, apiKey, endpoint, modelId } = config;
 
-  switch (type) {
-    case "anthropic":
-      return createAnthropic({ apiKey: apiKey ?? "" })(
-        modelId || "claude-3-5-sonnet-latest",
-      );
-    case "google":
-      return createGoogleGenerativeAI({ apiKey: apiKey ?? "" })(
-        modelId || "gemini-1.5-pro",
-      );
-    case "openrouter":
-      return createOpenRouter({ apiKey: apiKey ?? "" })(
-        modelId || "meta-llama/llama-3.1-405b-instruct",
-      );
-    case "openai":
-    case "custom":
-      return createOpenAI({
-        apiKey: apiKey ?? "",
-        baseURL: endpoint ?? undefined,
-      })(modelId || "gpt-4o");
-    case "workers-ai":
-      // Since it's not in the original switch, but it's in ManagedAiProvider type
-      // I'll add it here.
-      // Note: This needs access to env.AI if it's workers-ai, but this function
-      // only takes config.
-      // Actually, getModelFor has access to env.
-      throw new Error(`workers-ai provider should be handled in getModelFor`);
-    default:
-      throw new Error(`Unsupported provider type: ${type}`);
+  const getSingleModel = (mId: string) => {
+    switch (type) {
+      case "anthropic":
+        return createAnthropic({ apiKey: apiKey ?? "" })(
+          mId || "claude-3-5-sonnet-latest",
+        );
+      case "google":
+        return createGoogleGenerativeAI({ apiKey: apiKey ?? "" })(
+          mId || "gemini-1.5-pro",
+        );
+      case "openrouter":
+        return createOpenRouter({ apiKey: apiKey ?? "" })(
+          mId || "meta-llama/llama-3.1-405b-instruct",
+        );
+      case "openai":
+      case "custom":
+        return createOpenAI({
+          apiKey: apiKey ?? "",
+          baseURL: endpoint ?? undefined,
+        })(mId || "gpt-4o");
+      case "workers-ai":
+        throw new Error(`workers-ai provider should be handled in getModelFor`);
+      default:
+        throw new Error(`Unsupported provider type: ${type}`);
+    }
+  };
+
+  const models = (modelId || "")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  if (models.length > 1) {
+    return fallback(models.map(getSingleModel));
   }
+  return getSingleModel(models[0] || "");
 }
 
 export async function readAiProvider(db: D1Database): Promise<AiProvider> {

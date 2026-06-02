@@ -1,16 +1,16 @@
-# Downy
+# ylstack-agents-stack
 
 Build a team of agents and work with them from any device.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ylstack1/downy)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ylstack1/ylstack-agents-stack)
 
 - Best UX for working with multiple agents.
 - Each agent has its own personality, skills, tools, and workspace.
 - OpenAI Sub compatible for frontier models at a flat rate. Or, use any model on OpenRouter or Workers AI.
 
-![Downy demo](docs/demo.gif)
+![ylstack-agents-stack demo](docs/demo.gif)
 
-## Why Downy
+## Why ylstack-agents-stack
 
 - **Self-hosted.**
   - Runs in your Cloudflare account or locally.
@@ -21,13 +21,13 @@ Build a team of agents and work with them from any device.
   - Kimi 2.6 on Workers AI by default — no API keys to wire up.
   - Swap in [ChatGPT Plus/Pro](#optional-chatgpt-subscription) or any OpenRouter model when you want.
 - **Access anywhere.**
-  - Reach Downy from any device behind Cloudflare's secure network.
+  - Reach ylstack-agents-stack from any device behind Cloudflare's secure network.
 
 ## How does it work?
 
-I had been meaning to make something like Downy for a while, but this blog post made me actually build it: https://blog.cloudflare.com/project-think/. I highly recommend reading it if you want to understand how Downy works. But, basically each agent and subagent is its own Durable Object.
+I had been meaning to make something like ylstack-agents-stack for a while, but this blog post made me actually build it: https://blog.cloudflare.com/project-think/. I highly recommend reading it if you want to understand how ylstack-agents-stack works. But, basically each agent and subagent is its own Durable Object.
 
-![Architecture diagram](docs/downy-diagram.png)
+![ylstack-agents-stack diagram](docs/ylstack-agents-stack-diagram.png)
 
 Full system map: [`docs/architecture.md`](docs/architecture.md).
 
@@ -51,8 +51,8 @@ You'll need:
 Clone the repo and install dependencies:
 
 ```bash
-git clone https://github.com/bensenescu/downy
-cd downy
+git clone https://github.com/bensenescu/ylstack-agents-stack
+cd ylstack-agents-stack
 pnpm install
 ```
 
@@ -78,13 +78,13 @@ By default, the Worker is open to the public. To protect your instance, we recom
 
 ## Optional Authentication: Cloudflare Access
 
-To protect your Downy instance from public access, you can put it behind Cloudflare Access. This gates all traffic until you've authenticated.
+To protect your ylstack-agents-stack instance from public access, you can put it behind Cloudflare Access. This gates all traffic until you've authenticated.
 
 Here is how you set it up:
 
 1. **Go to your Worker's settings** in the Cloudflare dashboard:
    - Open the sidebar and find **Workers & Pages**.
-   - Click into your **downy** worker.
+   - Click into your **ylstack-agents-stack** worker.
    - Open the **Settings** tab.
 2. **Turn on Cloudflare Access:**
    - Under **Domains & Routes**, click the three-dot menu next to your `workers.dev` value.
@@ -93,7 +93,7 @@ Here is how you set it up:
 3. **Set those values as secrets:**
    - `npx wrangler secret put TEAM_DOMAIN` — paste `https://<team>.cloudflareaccess.com`
    - `npx wrangler secret put POLICY_AUD` — paste the `<aud-tag>`
-4. `pnpm deploy`, then open your Worker URL and log in. If these variables are not set, Downy will allow unauthenticated access.
+4. `pnpm deploy`, then open your Worker URL and log in. If these variables are not set, ylstack-agents-stack will allow unauthenticated access.
 
 <details>
 <summary>Sign-in works but you still see "Authentication required"?</summary>
@@ -111,7 +111,7 @@ Here is how you set it up:
 
 ## Optional: ChatGPT subscription
 
-Point Downy at your **ChatGPT Plus/Pro subscription** instead of Kimi:
+Point ylstack-agents-stack at your **ChatGPT Plus/Pro subscription** instead of Kimi:
 
 - **Smarter models at a flat rate** — no per-token API billing.
 - **Secure by network boundary** — a small proxy on your hardware holds the OAuth tokens, reached only via a Cloudflare Tunnel + Workers VPC binding (never the public internet).

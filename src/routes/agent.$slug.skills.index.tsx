@@ -28,17 +28,19 @@ function SkillsPage() {
     <PageShell width="wide">
       <BackLink to="/agent/$slug" params={{ slug }} label="chat" />
 
-      <PageHeader kicker="Skills" title="Reusable instructions.">
-        {" "}
-        <Link
-          to="/agent/$slug/workspace/$"
-          params={{ slug, _splat: "skills/new-skill/SKILL.md" }}
-          className="btn btn-sm btn-primary gap-1"
-        >
-          {" "}
-          <Plus size={14} /> New Skill{" "}
-        </Link>{" "}
-      </PageHeader>
+      <PageHeader
+        kicker="Skills"
+        title="Reusable instructions."
+        right={
+          <Link
+            to="/agent/$slug/workspace/$"
+            params={{ slug, _splat: "skills/new-skill/SKILL.md" }}
+            className="btn btn-sm btn-primary gap-1"
+          >
+            <Plus size={14} /> New Skill
+          </Link>
+        }
+      />
 
       <ErrorAlert message={error} />
 

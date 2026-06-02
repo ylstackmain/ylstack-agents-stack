@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "ylstack-agents-stack",
+    "isMonorepo": false,
+    "monorepoType": null,
+    "subProjects": [],
+    "hasGit": true,
+    "projectTypes": [
+      {
+        "name": "typescript",
+        "framework": "vite",
+        "config": "package.json"
+      }
+    ]
+  },
+  "backup": {
+    "include": [],
+    "exclude": [
+      "node_modules",
+      ".DS_Store",
+      "dist",
+      "dist-ssr",
+      "*.local",
+      ".env",
+      ".nitro",
+      ".tanstack",
+      ".wrangler",
+      ".alchemy",
+      ".output",
+      ".vinxi",
+      "__unconfig*",
+      "todos.json",
+      "auth.json",
+      "worker-configuration.d.ts"
+    ],
+    "excludeSubProjects": null,
+    "includeSubProjects": []
+  },
+  "history": {
+    "maxBackups": 100
+  },
+  "createdAt": "2026-06-01T18:30:05.408Z",
+  "updatedAt": "2026-06-01T18:30:05.409Z"
+}

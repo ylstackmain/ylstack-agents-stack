@@ -2,7 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { useSystemStatusQuery } from "../lib/system-status";
 
-const DISMISSED_KEY = "downy:dismissed-exa-warning";
+const DISMISSED_KEY = "ylstack-agents-stack:dismissed-exa-warning";
 
 function readDismissed(): boolean {
   if (typeof window === "undefined") return true;

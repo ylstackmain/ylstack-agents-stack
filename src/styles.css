@@ -8,11 +8,11 @@
   exclude: properties;
 }
 
-/* Built-in Downy theme — hand-tuned. Follows the `${id}-${mode}` naming
+/* Built-in ylstack-agents-stack theme — hand-tuned. Follows the `${id}-${mode}` naming
    convention used by the generated themes below so the theme picker can treat
    them uniformly. */
 @plugin "daisyui/theme" {
-  name: "downy-light";
+  name: "ylstack-agents-stack-light";
   default: true;
   color-scheme: light;
   --color-base-100: oklch(100% 0 0);
@@ -48,7 +48,7 @@
 }
 
 @plugin "daisyui/theme" {
-  name: "downy-dark";
+  name: "ylstack-agents-stack-dark";
   prefersdark: true;
   color-scheme: dark;
   --color-base-100: oklch(18% 0 0);
@@ -86,6 +86,7 @@
 html,
 body {
   @apply m-0 bg-base-200;
+  font-family: "Outfit", "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -109,7 +110,7 @@ select {
 
 /* Shimmer used by InputBox to signal "agent working" without a separate
    floating spinner. A 1px-tall gradient sweeps the top edge of the input. */
-@keyframes downy-shimmer {
+@keyframes ylstack-agents-stack-shimmer {
   0% {
     transform: translateX(-100%);
   }

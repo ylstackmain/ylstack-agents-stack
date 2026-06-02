@@ -1,10 +1,10 @@
-# Downy Architecture
+# ylstack-agents-stack Architecture
 
 This document describes the current implementation. It supersedes older planning notes in `docs/product-spec.md` and `docs/technical-plan.md` where those documents still describe the original singleton/Fiber design.
 
 ## System Shape
 
-Downy is a single-user, Cloudflare-hosted personal agent app. The frontend is a TanStack Router/React app served by the same Worker that handles agent APIs. The backend runs on Cloudflare Workers, Durable Objects, D1, R2, and Workers AI.
+ylstack-agents-stack is a single-user, Cloudflare-hosted personal agent app. The frontend is a TanStack Router/React app served by the same Worker that handles agent APIs. The backend runs on Cloudflare Workers, Durable Objects, D1, R2, and Workers AI.
 
 The app is multi-agent within one deployment. Each named agent has its own `DownyAgent` Durable Object instance keyed by slug. The root route redirects to the default agent, and all agent-specific screens live under `/agent/:slug/...`.
 

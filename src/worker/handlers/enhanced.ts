@@ -6,6 +6,7 @@ import {
   listSessions,
   createSession,
   deleteSession,
+  renameSession,
   getAiProvider,
   getTelegramChat,
   setTelegramChat,
@@ -133,6 +134,11 @@ export async function handleEnhancedRequest(
 
   if (url.pathname.startsWith("/api/sessions/")) {
     const id = url.pathname.split("/").pop()!;
+    if (request.method === "PUT") {
+      const body: any = await request.json();
+      await renameSession(env.DB, id, body.title);
+      return json({ ok: true });
+    }
     if (request.method === "DELETE") {
       await deleteSession(env.DB, id);
       return json({ ok: true });

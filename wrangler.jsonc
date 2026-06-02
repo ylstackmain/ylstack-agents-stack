@@ -1,25 +1,25 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "downy",
+  "name": "ylstack-agents-stack",
   "main": "dist/server/server.js",
   "assets": {
     "directory": "dist/client",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "downy",
-      "database_id": "REPLACE_WITH_DATABASE_ID",
+      "database_name": "ylstack-agents-stack",
+      "database_id": "17c1fe96-b2f1-4dd5-ac6a-6a0da4db2be8",
       "migrations_dir": "migrations",
     },
   ],
   "r2_buckets": [
     {
       "binding": "WORKSPACE_BUCKET",
-      "bucket_name": "downy-workspace",
+      "bucket_name": "ylstack-agents-stack-workspace",
     },
   ],
   "durable_objects": {

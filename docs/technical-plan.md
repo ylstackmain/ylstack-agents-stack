@@ -1,289 +1,107 @@
-# Downy — Technical Plan
+# ylstack-agents-stack — Technical Plan
 
 ## Context
 
-Build a cloud-hosted personal agent on Cloudflare's Project Think primitives — single persistent chat thread, user-editable identity/memory markdown files, asynchronous research tasks. See `product-spec.md` for the product rationale.
+This is a single-user, Cloudflare-hosted personal agent app. The frontend is a TanStack Start/React app served by the same Worker that handles agent APIs. The backend runs on Cloudflare Workers, Durable Objects, D1, R2, and Workers AI.
 
-Starts from the current repo: a bare TanStack Start + Vite + Tailwind + Cloudflare Workers template (React 19, TanStack Router, `@cloudflare/vite-plugin`, Manrope/Fraunces typography with a custom `sea-ink`/`lagoon`/`foam` palette in `src/styles.css`). No DOs, no agent SDKs installed yet.
-
-`private-every-app/apps/todo-app` is a reference **only** for Durable Object wiring — `wrangler.jsonc` structure, `entry.worker.ts` hand-off to TanStack, WebSocket upgrade pattern, client reconnect. Its D1 / Drizzle / TanStack DB / daisyUI / auth / sync middleware are not applicable.
-
-### Locked decisions
-
-- Single-tenant, deploy-to-own-Cloudflare (no multi-tenant, no auth).
-- **Kimi 2.5** as the default model.
-- **Exa** as the web search provider.
-- **Codemode** as the primary tool surface (not direct tools).
-- Four core markdown files live in Workspace, read fresh into the system prompt each turn via `beforeTurn()`.
-- Async tasks use Fibers with WebSocket push when complete.
-- No HEARTBEAT / alarms. No forced onboarding / naming ritual.
-- **Out of v1:** self-authored extensions, sub-agent Facets, Tier-4 sandbox, conversation branching.
+The app is multi-agent within one deployment. Each named agent has its own `DownyAgent` Durable Object instance keyed by slug. The root route redirects to the default agent, and all agent-specific screens live under `/agent/:slug/...`.
 
 ---
 
-## Architecture
+## Current Architecture (Implemented)
 
-One singleton Durable Object (`DownyAgent`) extends the `Think` base class and owns:
+### Backend
 
-- The Persistent Session (message history with FTS5 search).
-- The Workspace (durable virtual filesystem for files).
-- A `beforeTurn()` hook that reads `SOUL.md`, `IDENTITY.md`, `USER.md`, `MEMORY.md` from Workspace and injects them into the system prompt.
-- Tools registered through `createCodeTool` (codemode) — workspace CRUD, web search, web scrape, session search.
-- A WebSocket endpoint for streaming tokens + task-completion notifications back to the UI.
-- Fibers for long-running work the agent wants to spawn without blocking the chat.
+**`src/server.ts`** — Worker entry point. Composes TanStack Start server rendering with custom REST API handlers. Cloudflare Access verification happens here (except on localhost). REST API requests dispatch to handlers under `src/worker/handlers/`. Agent WebSocket/chat requests fall through to `routeAgentRequest()` from `agents`.
 
-Frontend is three TanStack Start routes layered on top of the existing template:
+**Durable Objects:**
 
-- `/` — chat interface with floating Settings + Workspace buttons.
-- `/settings` — editing the four core markdown files.
-- `/workspace` — browsing agent-generated output files.
+- **`DownyAgent`** (`src/worker/agent/DownyAgent.ts`) — user-facing chat agent. One instance per agent slug. Owns:
+  - Think chat/session state for one agent
+  - Per-agent `Workspace` (DO SQLite + R2)
+  - Live MCP connections
+  - Background task records in DO storage
+  - Bootstrap state and synthetic bootstrap kickoff
+  - Peer-agent read-only RPC methods
 
-### Model provider
+- **`ChildAgent`** (`src/worker/agent/ChildAgent.ts`) — background worker agent. One instance per task. Owns:
+  - One background task transcript and metadata
+  - The LLM loop for a dispatched task
+  - A remote workspace proxy that forwards file operations to the parent `DownyAgent`
+  - MCP proxy tools that call through the parent agent's live MCP connections
 
-`workers-ai-provider` covers Workers AI-hosted models. If Kimi 2.5 is available in the Workers AI catalog at build time, use the binding. If not, wire a compatible provider (Moonshot direct or OpenRouter) via the `ai` SDK and put the key in an env var. **Verify availability as the first step of implementation** and pick the provider accordingly — this is the only decision that can gate everything else.
+### Frontend
 
----
+Root route handles theme bootstrapping, React Query, the mobile header, and TanStack devtools in development.
 
-## Cloudflare Bindings
+Agent routes are under `/agent/:slug/...`:
 
-Extend existing `wrangler.jsonc`:
+- `/agent/:slug/` — chat
+- `/agent/:slug/identity` — identity files (`SOUL.md`, `IDENTITY.md`, `MEMORY.md`, `USER.md`)
+- `/agent/:slug/workspace` — workspace files
+- `/agent/:slug/skills` — skill catalog
+- `/agent/:slug/mcp` — MCP status
+- `/agent/:slug/background-tasks` — task history/detail
+- `/agent/:slug/settings` — agent-level settings
 
-```jsonc
-{
-  "name": "downy",
-  "main": "src/entry.worker.ts",
-  "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "durable_objects": {
-    "bindings": [{ "name": "AGENT", "class_name": "DownyAgent" }],
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DownyAgent"] }],
-  "r2_buckets": [
-    { "binding": "WORKSPACE_BUCKET", "bucket_name": "downy-workspace" },
-  ],
-  "ai": { "binding": "AI" },
-  "browser": { "binding": "BROWSER" },
-  "vars": {
-    "EXA_API_KEY": "",
-    "MODEL_ID": "kimi-2.5",
-  },
-}
-```
+User-level settings live under `/settings`.
 
-Reference for structure: `private-every-app/apps/todo-app/wrangler.jsonc` (DO binding + migrations shape).
+### Storage Boundaries
 
----
+- **D1** stores deployment-level data: agent registry (slug, display name, privacy, archive), shared user profile (`identity/USER.md`), and user preferences (theme, AI provider, etc.).
+- **R2** stores workspace file bytes through `@cloudflare/shell` `Workspace`.
+- **Durable Object storage** stores agent-local runtime state: Think session/chat state, bootstrap sentinel, background task records, and MCP connection config.
 
-## Dependencies to Add
+### Identity Model
 
-```
-@cloudflare/think
-@cloudflare/agents
-@cloudflare/ai-chat
-@cloudflare/codemode
-@cloudflare/shell
-ai
-workers-ai-provider
-zod
-react-markdown
-remark-gfm
-```
+The UI and tools expose four identity files under `identity/`:
 
-Keep: React 19, TanStack Start/Router, Tailwind 4, Vite, lucide-react, wrangler 4, `@cloudflare/vite-plugin`.
+- `identity/SOUL.md`, `identity/IDENTITY.md`, and `identity/MEMORY.md` — agent-level files in that agent's workspace
+- `identity/USER.md` — user-level state in D1, shared by all agents
 
----
+`DownyAgent.beforeTurn()` reads the agent files, the shared user file, peer-agent metadata, skills, and bootstrap state to build the per-turn system prompt.
 
-## Backend
+### Tool Surface
 
-### Directory layout (new under `src/`)
+Shared parent/child tools are built in `src/worker/agent/tool-registry.ts` via `buildSharedToolSet`. Both agents call this and merge in their own additions:
 
-```
-src/
-  entry.worker.ts              # NEW — composes on top of TanStack's server-entry
-  worker/
-    agent/
-      DownyAgent.ts         # Think subclass, the DO
-      systemPrompt.ts          # beforeTurn() — read identity files → prompt
-      tools.ts                 # codemode tool registry
-      tools/
-        workspace.ts           # list / read / write / delete
-        web.ts                 # search (Exa) + scrape (Browser Run + fetch)
-        session.ts             # session FTS search
-    handlers/
-      chat.ts                  # WebSocket upgrade → DO.fetch()
-      files.ts                 # REST: list / read / write core + workspace files
-  lib/
-    core-files.ts              # constants: SOUL_PATH, IDENTITY_PATH, etc.
-```
+- `web_search` / `web_scrape` — parallel bulk web search/scrape via Exa
+- `read_peer_agent` — DO-to-DO RPC to read another agent's workspace/identity
+- Skill CRUD tools: `list_skills`, `read_skill`, `list_skill_files`, `create_skill`, `update_skill`, `delete_skill`
+- File tools: `write`, `move`, `copy`, `read`, `edit`, `delete`
+- `write_user_profile` / `read_user_profile`
+- `todo_write` — persists checklist into DO storage
 
-### `src/entry.worker.ts`
+Parent-only tools (added in `DownyAgent#getTools`):
 
-`@tanstack/react-start/server-entry` is a tiny module that exports `{ fetch }` from `createStartHandler(defaultStreamHandler)`. We don't replace TanStack — we compose. Pattern mirrors `private-every-app/apps/todo-app/src/entry.worker.ts`:
+- `spawn_background_task` — creates a `ChildAgent` task
+- `connect_mcp_server` / `list_mcp_servers` / `disconnect_mcp_server`
 
-```ts
-import tanstackEntry from "@tanstack/react-start/server-entry";
-import { handleChatWebSocket } from "./worker/handlers/chat";
-import { handleFilesRequest } from "./worker/handlers/files";
+### Background Tasks
 
-export * from "@tanstack/react-start/server-entry"; // load-bearing re-export
-export { DownyAgent } from "./worker/agent/DownyAgent"; // DO class
+Background tasks run as child Durable Objects:
 
-export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    ctx: ExecutionContext,
-  ): Promise<Response> {
-    const url = new URL(request.url);
-    if (url.pathname === "/api/chat") return handleChatWebSocket(request, env);
-    if (url.pathname.startsWith("/api/files"))
-      return handleFilesRequest(request, env);
-    return tanstackEntry.fetch(request);
-  },
-};
-```
+1. Parent calls `spawn_background_task` with a brief
+2. `ChildAgent` stores metadata and runs one Think turn
+3. Child uses parent workspace/MCP proxies (via DO-to-DO RPC)
+4. Child returns final markdown with `slug:` header
+5. Parent writes result to `workspace/notes/<slug>.md`
+6. Parent injects synthetic completion message into chat
 
-The `export *` line is required — the Cloudflare Vite plugin and TanStack's build expect all TanStack exports re-surfaced at the entry boundary. The `export { DownyAgent }` makes the DO class discoverable by the Wrangler binding. Switch `wrangler.jsonc`'s `"main"` from `@tanstack/react-start/server-entry` to `src/entry.worker.ts`.
+Child agents intentionally cannot spawn nested background tasks or connect MCP servers. They inherit access through parent RPC.
 
-### `DownyAgent` (extends Think)
+## Key Files Today
 
-- `idFromName("singleton")` — one DO for the whole deployment.
-- `getModel()` returns Kimi 2.5 via the chosen provider (see Model Provider above).
-- Workspace mounted at Tier 0 of the Execution Ladder (SQLite + R2 via `WORKSPACE_BUCKET`).
-- Uses Think's built-in Persistent Sessions for message storage (no custom DB).
-- `beforeTurn()`: calls `buildSystemPrompt()`, which reads the four core files fresh from Workspace and composes them into the system prompt.
-- Registers codemode tool via `createCodeTool({ tools: [workspaceTools, webTools, sessionTools] })`.
-- On first boot (empty session): seed the four core files in Workspace with starter content — OpenClaw-style personality prose for `SOUL.md` / `IDENTITY.md` (shipped default agent name), empty `USER.md` / `MEMORY.md`.
-
-### Tools (codemode namespace)
-
-One `createCodeTool` call; agent writes TypeScript that calls `codemode.*`:
-
-- `workspace.list(path?)` → Workspace directory listing
-- `workspace.read(path)` → file contents
-- `workspace.write(path, content)` → write/overwrite
-- `workspace.delete(path)` → delete
-- `web.search(query)` → Exa API call (using `EXA_API_KEY`)
-- `web.scrape(url)` → Browser Run via `env.BROWSER` for JS pages; `fetch()` fallback for static
-- `session.search(query)` → FTS5 search over Think's session
-
-### Async Tasks via Fibers
-
-When a request needs background work, codemode looks like:
-
-```ts
-await fiber.spawn(async () => {
-  const results = await codemode.webSearch({ query });
-  // multi-step research
-  await codemode.workspaceWrite({ path, content });
-  await session.postMessage("Done — see notes/foo.md");
-});
-return "On it — I'll ping you when it's ready.";
-```
-
-The chat turn returns immediately. The Fiber runs in the background, hibernates between steps, and posts a completion message back through the session. WebSocket pushes the new message to any connected client.
-
----
-
-## Frontend
-
-### Theme
-
-Keep `sea-ink` / `lagoon` / `foam` palette and Manrope/Fraunces typography from `src/styles.css`. Do not pull in daisyUI — extend Tailwind 4 and the existing CSS tokens.
-
-### Routes (file-based, under `src/routes/`)
-
-```
-src/routes/
-  __root.tsx                   # EDIT — keep layout, drop Footer on chat page
-  index.tsx                    # REWRITE — chat interface
-  settings.tsx                 # NEW — list of four core files
-  settings.$file.tsx           # NEW — editor for one core file
-  workspace.tsx                # NEW — workspace file browser
-  workspace.$.tsx              # NEW — splat, individual file view/edit
-  about.tsx                    # DELETE (template demo)
-```
-
-### Components (under `src/components/`)
-
-```
-components/
-  chat/
-    ChatShell.tsx              # Layout with floating action buttons
-    MessageList.tsx            # Scrolling list, streaming
-    Message.tsx                # Single message, markdown render, file-link pill
-    InputBox.tsx               # Textarea + Enter-submit
-    FloatingButtons.tsx        # Settings + Workspace icons (lucide-react)
-    useChatSocket.ts           # WebSocket client with reconnect
-  markdown/
-    MarkdownEditor.tsx         # Textarea-based editor (v1; Tiptap later)
-    MarkdownPreview.tsx        # react-markdown + remark-gfm
-  files/
-    FileTree.tsx               # Flat listing (workspace is shallow in v1)
-    FileViewer.tsx             # Preview non-markdown; editor for .md
-```
-
-### Chat (`/`)
-
-- Full-height layout; message list scrolls; input pinned bottom.
-- Two floating icon buttons (top-right): gear → `/settings`, folder → `/workspace`.
-- `useChatSocket` opens WebSocket to `/api/chat`, receives streaming tokens, reconnects on close (mirror `private-every-app/apps/todo-app/src/client/sync/useSyncEvents.ts` for reconnect shape — reference only).
-- Fiber completion messages render with a file-link pill when they reference a workspace path.
-
-### Settings (`/settings` + `/settings/$file`)
-
-- Index: list of the four core files with one-line descriptions + last-edited timestamps from `/api/files`.
-- Detail: `MarkdownEditor` (textarea) with preview toggle, Save, Revert.
-- PUT to `/api/files/settings/:name`; agent picks up changes on the next turn via `beforeTurn()`.
-
-### Workspace (`/workspace` + `/workspace/$`)
-
-- Index: `FileTree` listing all files excluding the four core identity files.
-- Detail (splat): markdown files render with `MarkdownPreview` + Edit toggle; non-markdown files shown as plain text.
-- Delete uses native `confirm()` for v1 simplicity.
-
----
-
-## Reference Files (todo-app — DO/WebSocket wiring only)
-
-| Pattern                                          | File                                                               |
-| ------------------------------------------------ | ------------------------------------------------------------------ |
-| Worker entry w/ custom fetch + TanStack fallback | `private-every-app/apps/todo-app/src/entry.worker.ts`              |
-| Wrangler DO binding + migrations shape           | `private-every-app/apps/todo-app/wrangler.jsonc`                   |
-| WebSocket upgrade handler                        | `private-every-app/apps/todo-app/src/handlers/sync.ts`             |
-| DO with WebSocket hibernation                    | `private-every-app/apps/todo-app/src/durableObjects/UserSyncDO.ts` |
-| Client reconnect pattern                         | `private-every-app/apps/todo-app/src/client/sync/useSyncEvents.ts` |
-
-Do **not** copy: D1/Drizzle, TanStack DB collections, auth middleware, emitSyncEvent middleware, daisyUI components, Tiptap, dnd-kit.
-
----
-
-## Implementation Order
-
-1. Confirm Kimi 2.5 availability in Workers AI; if absent, wire Moonshot/OpenRouter via `ai` SDK. This decision unblocks everything else.
-2. Install dependencies; extend `wrangler.jsonc` with DO + R2 + AI + Browser bindings and the `EXA_API_KEY` / `MODEL_ID` vars.
-3. Write `src/entry.worker.ts` — pass through to TanStack; handle `/api/chat` and `/api/files/*`.
-4. Implement `DownyAgent` DO: minimal Think subclass that echoes back first.
-5. Wire Persistent Sessions + streaming over WebSocket; test with a hardcoded system prompt.
-6. Add Workspace; seed the four core files on first boot.
-7. Implement `beforeTurn()` to read core files into the system prompt.
-8. Register codemode with workspace tools; verify the agent can read/write files via script.
-9. Add Exa search and Browser Run scrape tools.
-10. Add Fiber-based async task pattern; verify background kick-off and completion message.
-11. Build the chat route (`/`) and `useChatSocket`.
-12. Build Settings routes + `MarkdownEditor`.
-13. Build Workspace routes + `FileTree` / `FileViewer`.
-14. Add floating Settings + Workspace buttons to the chat shell.
-15. Write initial `SOUL.md` / `IDENTITY.md` seed content.
-
----
-
-## Verification
-
-- `npm run dev` — chat loads at `/`, streams a response from the agent over WebSocket.
-- Edit `SOUL.md` in `/settings` → send a message → agent's next response reflects the edit (proves `beforeTurn()` reads fresh).
-- Ask for competitive research on any topic → agent replies "on it" immediately → a new markdown file appears in `/workspace` later → a chat message links to it.
-- Click the file link → `/workspace/$` renders the markdown.
-- Reload the page mid-task → WebSocket reconnects → completion message still arrives.
-- `npm run build` passes type-check.
-- `wrangler deploy` deploys cleanly to a throwaway Cloudflare account.
+| File                                  | Role                                  |
+| ------------------------------------- | ------------------------------------- |
+| `src/server.ts`                       | Worker entry, exports `DownyAgent` DO |
+| `src/worker/agent/DownyAgent.ts`      | Parent agent DO class                 |
+| `src/worker/agent/ChildAgent.ts`      | Background task DO class              |
+| `src/worker/agent/RemoteWorkspace.ts` | Proxy workspace for child agents      |
+| `src/worker/agent/mcp-proxy.ts`       | MCP tool proxy helpers                |
+| `src/worker/agent/tool-registry.ts`   | Shared tool set builder               |
+| `src/worker/handlers/*`               | REST API handlers                     |
+| `src/worker/lib/get-agent.ts`         | DO stub lookup                        |
+| `src/lib/theme.ts`                    | Theme system                          |
+| `src/lib/preferences.ts`              | Preference hooks                      |
+| `wrangler.jsonc`                      | Cloudflare bindings config            |

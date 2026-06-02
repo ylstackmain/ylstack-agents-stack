@@ -1,4 +1,4 @@
-# Downy — Product Spec
+# ylstack-agents-stack — Product Spec
 
 ## Vision
 

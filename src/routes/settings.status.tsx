@@ -37,7 +37,7 @@ function SystemStatusPage() {
     value: string;
     status: "ok" | "warn" | "error";
   }) => (
-    <div className="flex items-center justify-between p-4 bg-base-200 rounded-lg">
+    <div className="flex items-center justify-between p-4 bg-base-100 border border-base-300 rounded-box shadow-sm">
       <div>
         <div className="text-sm opacity-60 uppercase tracking-wider font-bold">
           {label}
@@ -96,7 +96,7 @@ function SystemStatusPage() {
             value={status.telegramConfigured ? "Active" : "Disabled"}
             status={status.telegramConfigured ? "ok" : "warn"}
           />
-          <div className="p-4 bg-base-200 rounded-lg">
+          <div className="p-4 bg-base-100 border border-base-300 rounded-box shadow-sm">
             <div className="text-sm opacity-60 uppercase tracking-wider font-bold mb-1">
               Telegram Whitelist
             </div>
@@ -114,7 +114,7 @@ function SystemStatusPage() {
             {(status.agentStats || []).map((agent: any) => (
               <div
                 key={agent.slug}
-                className="p-4 bg-base-200 rounded-lg border border-base-300"
+                className="p-4 bg-base-100 rounded-box border border-base-300 shadow-sm"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-bold text-lg">agent/{agent.slug}</div>
@@ -134,7 +134,7 @@ function SystemStatusPage() {
                 ) : (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-base-100 p-2 rounded flex flex-col">
+                      <div className="bg-base-200/50 p-2 rounded flex flex-col">
                         <span className="text-[10px] uppercase opacity-50 font-bold">
                           Tokens (In/Out)
                         </span>
@@ -142,7 +142,7 @@ function SystemStatusPage() {
                           {agent.usage?.input || 0} / {agent.usage?.output || 0}
                         </span>
                       </div>
-                      <div className="bg-base-100 p-2 rounded flex flex-col">
+                      <div className="bg-base-200/50 p-2 rounded flex flex-col">
                         <span className="text-[10px] uppercase opacity-50 font-bold">
                           Workspace Storage
                         </span>
@@ -181,7 +181,7 @@ function SystemStatusPage() {
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <Database className="w-5 h-5" /> AI Providers
           </h2>
-          <div className="p-6 bg-base-200 rounded-lg border border-base-300">
+          <div className="p-6 bg-base-100 rounded-box border border-base-300 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="text-2xl font-bold">
                 {status.aiProvidersCount} Registered Providers

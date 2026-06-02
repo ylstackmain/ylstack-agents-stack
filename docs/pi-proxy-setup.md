@@ -1,6 +1,6 @@
 # Pi proxy setup
 
-The Pi proxy lets Downy route inference through your **ChatGPT Plus/Pro subscription** via [`@mariozechner/pi-ai`](https://www.npmjs.com/package/@mariozechner/pi-ai).
+The Pi proxy lets ylstack-agents-stack route inference through your **ChatGPT Plus/Pro subscription** via [`@mariozechner/pi-ai`](https://www.npmjs.com/package/@mariozechner/pi-ai).
 
 OpenAI currently allows third-party harnesses to use ChatGPT subscriptions for personal use, but that policy could change at any time — treat this path as best-effort. See [`aisdk-pi-proxy/README.md`](../aisdk-pi-proxy/README.md) for ToS context.
 
@@ -50,8 +50,8 @@ The proxy itself runs without auth because the network boundary _is_ the securit
 
    `wrangler.jsonc` reads that env var and the Worker code uses `env.PI_RELAY_VPC` only when the binding exists at deploy time, so you can leave the line commented out on machines that don't have the proxy.
 
-5. **Switch Downy to the proxy.** Open the deployed app at `/settings` → **Preferences** → **Model** and pick **Pi proxy — production VPC**. New turns route through your subscription.
+5. **Switch ylstack-agents-stack to the proxy.** Open the deployed app at `/settings` → **Preferences** → **Model** and pick **Pi proxy — production VPC**. New turns route through your subscription.
 
 ## Troubleshooting
 
-If turns fail, `pnpm tail` (which runs `wrangler tail downy`) shows the runtime error. `connection_refused` means `cloudflared` can't reach the proxy on loopback — check it's running with `curl http://127.0.0.1:8788/health` on the tunnel host. `npx wrangler vpc service list` confirms the service is registered. Workers VPC is in public beta and free on all Workers plans.
+If turns fail, `pnpm tail` (which runs `wrangler tail ylstack-agents-stack`) shows the runtime error. `connection_refused` means `cloudflared` can't reach the proxy on loopback — check it's running with `curl http://127.0.0.1:8788/health` on the tunnel host. `npx wrangler vpc service list` confirms the service is registered. Workers VPC is in public beta and free on all Workers plans.

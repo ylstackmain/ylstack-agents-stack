@@ -8,10 +8,12 @@ import {
   ListTodo,
   Lock,
   MessageSquare,
+  Pencil,
   Plug,
   Plus,
   Settings,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +29,8 @@ import {
   useAgentSkills,
   useBackgroundTasks,
   useCreateSession,
+  useDeleteSession,
+  useRenameSession,
   useMcpServers,
   useMcpServersLiveSync,
   useSessions,
@@ -344,24 +348,76 @@ function SectionHeader({
   }
 }
 
-export function SessionSwitcher({ onNavigate }: { onNavigate?: () => void }) {
+export function SessionSwitcher({
+  agent,
+  onNavigate,
+}: {
+  agent?: AgentSocket;
+  onNavigate?: () => void;
+}) {
   const slug = useCurrentAgentSlug();
   const { data: sessions } = useSessions(slug);
   const navigate = useNavigate();
-  const [creating, setCreating] = useState(false);
-  const [title, setTitle] = useState("");
+  const qc = useQueryClient();
   const createMut = useCreateSession();
+  const deleteMut = useDeleteSession();
+  const renameMut = useRenameSession();
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState<string>("");
+
+  useEffect(() => {
+    if (!agent) return;
+    const onMessage = (e: MessageEvent) => {
+      if (typeof e.data !== "string") return;
+      try {
+        const parsed = JSON.parse(e.data);
+        if (parsed && parsed.type === "session_renamed") {
+          void qc.invalidateQueries({ queryKey: queryKeys.sessions(slug) });
+        }
+      } catch {}
+    };
+    agent.addEventListener("message", onMessage);
+    return () => {
+      agent.removeEventListener("message", onMessage);
+    };
+  }, [agent, slug, qc]);
 
   const handleCreate = async () => {
-    if (!title.trim()) return;
-    const session = await createMut.mutateAsync({ slug, title: title.trim() });
-    setCreating(false);
-    setTitle("");
+    const session = await createMut.mutateAsync({ slug, title: "New Chat" });
     await navigate({
-      to: "/agent/$slug/chat/$sessionId" as any,
-      params: { slug, sessionId: session.id } as any,
+      to: "/agent/$slug/chat/$sessionId",
+      params: { slug, sessionId: session.id },
     });
     onNavigate?.();
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm("Delete this session?")) {
+      await deleteMut.mutateAsync({ slug, id });
+    }
+  };
+
+  const startEdit = (e: React.MouseEvent, id: string, currentTitle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(id);
+    setEditTitle(currentTitle);
+  };
+
+  const handleRename = async () => {
+    if (!editingId || !editTitle.trim()) {
+      setEditingId(null);
+      return;
+    }
+    await renameMut.mutateAsync({
+      slug,
+      id: editingId,
+      title: editTitle.trim(),
+    });
+    setEditingId(null);
   };
 
   return (
@@ -369,42 +425,67 @@ export function SessionSwitcher({ onNavigate }: { onNavigate?: () => void }) {
       <SectionHeader icon={MessageSquare} label="Sessions" />
       <div className="flex flex-col gap-1">
         {sessions?.map((s) => (
-          <Link
+          <div
             key={s.id}
-            to={"/agent/$slug/chat/$sessionId" as any}
-            params={{ slug, sessionId: s.id } as any}
-            onClick={onNavigate}
-            activeProps={{ className: "bg-base-200 text-base-content" }}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-base-content/70 hover:bg-base-200 hover:text-base-content"
+            className="group relative flex items-center rounded-md text-xs text-base-content/70 hover:bg-base-200 hover:text-base-content"
           >
-            <MessageSquare size={12} className="shrink-0 opacity-50" />
-            <span className="truncate">{s.title}</span>
-          </Link>
+            {editingId === s.id ? (
+              <div className="flex w-full items-center gap-1 px-2 py-1.5">
+                <input
+                  autoFocus
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={handleRename}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRename();
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="min-w-0 flex-1 bg-transparent text-xs outline-none"
+                />
+              </div>
+            ) : (
+              <Link
+                to="/agent/$slug/chat/$sessionId"
+                params={{ slug, sessionId: s.id }}
+                onClick={onNavigate}
+                activeProps={{ className: "bg-base-200 text-base-content" }}
+                className="flex flex-1 items-center gap-2 px-2 py-1.5"
+              >
+                <MessageSquare size={12} className="shrink-0 opacity-50" />
+                <span className="truncate pr-8">{s.title}</span>
+              </Link>
+            )}
+
+            {editingId !== s.id && (
+              <div className="absolute right-1 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={(e) => startEdit(e, s.id, s.title)}
+                  className="p-1 text-base-content/50 hover:text-base-content"
+                  title="Rename"
+                >
+                  <Pencil size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleDelete(e, s.id)}
+                  className="p-1 text-base-content/50 hover:text-error"
+                  title="Delete"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            )}
+          </div>
         ))}
 
-        {creating ? (
-          <div className="flex items-center gap-1 px-2 py-1">
-            <input
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreate();
-                if (e.key === "Escape") setCreating(false);
-              }}
-              placeholder="Session title..."
-              className="min-w-0 flex-1 bg-transparent text-xs outline-none"
-            />
-          </div>
-        ) : (
-          <button
-            onClick={() => setCreating(true)}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-primary hover:bg-primary/5"
-          >
-            <Plus size={12} />
-            <span>New Session</span>
-          </button>
-        )}
+        <button
+          onClick={handleCreate}
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-primary hover:bg-primary/5 w-full text-left"
+        >
+          <Plus size={12} />
+          <span>New Session</span>
+        </button>
       </div>
     </section>
   );

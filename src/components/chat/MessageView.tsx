@@ -5,6 +5,7 @@ import {
   Copy,
   FileText,
   Pencil,
+  Send,
   Sparkles,
   Undo2,
 } from "lucide-react";
@@ -425,10 +426,16 @@ function MessageViewImpl({
       <div
         className={
           isUser
-            ? "border border-l-[3px] border-base-300 border-l-accent bg-base-100 px-5 py-4 text-base-content"
+            ? "relative border border-l-[3px] border-base-300 border-l-accent bg-base-100 px-5 py-4 text-base-content"
             : ""
         }
       >
+        {isUser && (message as any).metadata?.telegram && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 rounded bg-[#0088cc]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#0088cc] dark:text-[#33aadd]">
+            <Send size={10} />
+            <span>Telegram</span>
+          </div>
+        )}
         {backgroundTaskSource ? (
           <BackgroundTaskHeader source={backgroundTaskSource} />
         ) : null}

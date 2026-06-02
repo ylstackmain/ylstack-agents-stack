@@ -5,20 +5,23 @@ import { GENERATED_THEMES, type ThemeManifestEntry } from "./themes.generated";
 
 export type ColorScheme = "system" | "light" | "dark";
 
-const DOWNY: ThemeManifestEntry = { id: "downy", name: "Downy" };
+const YLSTACK: ThemeManifestEntry = {
+  id: "ylstack-agents-stack",
+  name: "YLStack",
+};
 
-/** All themes available in the picker, with the built-in Downy theme first. */
+/** All themes available in the picker, with the built-in ylstack-agents-stack theme first. */
 export const THEMES: readonly ThemeManifestEntry[] = [
-  DOWNY,
+  YLSTACK,
   ...GENERATED_THEMES,
 ];
 
-const DEFAULT_THEME_ID = DOWNY.id;
+const DEFAULT_THEME_ID = YLSTACK.id;
 const DEFAULT_COLOR_SCHEME: ColorScheme = "system";
 
-const THEME_ID_KEY = "downy:theme-id";
-const COLOR_SCHEME_KEY = "downy:color-scheme";
-const CHANGE_EVENT = "downy:theme-change";
+const THEME_ID_KEY = "ylstack-agents-stack:theme-id";
+const COLOR_SCHEME_KEY = "ylstack-agents-stack:color-scheme";
+const CHANGE_EVENT = "ylstack-agents-stack:theme-change";
 
 const VALID_IDS = new Set(THEMES.map((t) => t.id));
 

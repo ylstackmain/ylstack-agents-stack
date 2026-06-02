@@ -4,151 +4,151 @@ export type ThemeManifestEntry = { id: string; name: string };
 
 export const GENERATED_THEMES: readonly ThemeManifestEntry[] = [
   {
-    id: "amoled",
-    name: "AMOLED",
+    "id": "amoled",
+    "name": "AMOLED"
   },
   {
-    id: "aura",
-    name: "Aura",
+    "id": "aura",
+    "name": "Aura"
   },
   {
-    id: "ayu",
-    name: "Ayu",
+    "id": "ayu",
+    "name": "Ayu"
   },
   {
-    id: "carbonfox",
-    name: "Carbonfox",
+    "id": "carbonfox",
+    "name": "Carbonfox"
   },
   {
-    id: "catppuccin-frappe",
-    name: "Catppuccin Frappe",
+    "id": "catppuccin-frappe",
+    "name": "Catppuccin Frappe"
   },
   {
-    id: "catppuccin-macchiato",
-    name: "Catppuccin Macchiato",
+    "id": "catppuccin-macchiato",
+    "name": "Catppuccin Macchiato"
   },
   {
-    id: "catppuccin",
-    name: "Catppuccin",
+    "id": "catppuccin",
+    "name": "Catppuccin"
   },
   {
-    id: "cobalt2",
-    name: "Cobalt2",
+    "id": "cobalt2",
+    "name": "Cobalt2"
   },
   {
-    id: "cursor",
-    name: "Cursor",
+    "id": "cursor",
+    "name": "Cursor"
   },
   {
-    id: "dracula",
-    name: "Dracula",
+    "id": "dracula",
+    "name": "Dracula"
   },
   {
-    id: "everforest",
-    name: "Everforest",
+    "id": "everforest",
+    "name": "Everforest"
   },
   {
-    id: "flexoki",
-    name: "Flexoki",
+    "id": "flexoki",
+    "name": "Flexoki"
   },
   {
-    id: "github",
-    name: "GitHub",
+    "id": "github",
+    "name": "GitHub"
   },
   {
-    id: "gruvbox",
-    name: "Gruvbox",
+    "id": "gruvbox",
+    "name": "Gruvbox"
   },
   {
-    id: "kanagawa",
-    name: "Kanagawa",
+    "id": "kanagawa",
+    "name": "Kanagawa"
   },
   {
-    id: "lucent-orng",
-    name: "Lucent Orng",
+    "id": "lucent-orng",
+    "name": "Lucent Orng"
   },
   {
-    id: "material",
-    name: "Material",
+    "id": "material",
+    "name": "Material"
   },
   {
-    id: "matrix",
-    name: "Matrix",
+    "id": "matrix",
+    "name": "Matrix"
   },
   {
-    id: "mercury",
-    name: "Mercury",
+    "id": "mercury",
+    "name": "Mercury"
   },
   {
-    id: "monokai",
-    name: "Monokai",
+    "id": "monokai",
+    "name": "Monokai"
   },
   {
-    id: "nightowl",
-    name: "Night Owl",
+    "id": "nightowl",
+    "name": "Night Owl"
   },
   {
-    id: "nord",
-    name: "Nord",
+    "id": "nord",
+    "name": "Nord"
   },
   {
-    id: "oc-2",
-    name: "OC-2",
+    "id": "oc-2",
+    "name": "OC-2"
   },
   {
-    id: "one-dark",
-    name: "One Dark",
+    "id": "one-dark",
+    "name": "One Dark"
   },
   {
-    id: "onedarkpro",
-    name: "One Dark Pro",
+    "id": "onedarkpro",
+    "name": "One Dark Pro"
   },
   {
-    id: "opencode",
-    name: "OpenCode",
+    "id": "opencode",
+    "name": "OpenCode"
   },
   {
-    id: "orng",
-    name: "Orng",
+    "id": "orng",
+    "name": "Orng"
   },
   {
-    id: "osaka-jade",
-    name: "Osaka Jade",
+    "id": "osaka-jade",
+    "name": "Osaka Jade"
   },
   {
-    id: "palenight",
-    name: "Palenight",
+    "id": "palenight",
+    "name": "Palenight"
   },
   {
-    id: "rosepine",
-    name: "Rose Pine",
+    "id": "rosepine",
+    "name": "Rose Pine"
   },
   {
-    id: "shadesofpurple",
-    name: "Shades of Purple",
+    "id": "shadesofpurple",
+    "name": "Shades of Purple"
   },
   {
-    id: "solarized",
-    name: "Solarized",
+    "id": "solarized",
+    "name": "Solarized"
   },
   {
-    id: "synthwave84",
-    name: "Synthwave '84",
+    "id": "synthwave84",
+    "name": "Synthwave '84"
   },
   {
-    id: "tokyonight",
-    name: "Tokyonight",
+    "id": "tokyonight",
+    "name": "Tokyonight"
   },
   {
-    id: "vercel",
-    name: "Vercel",
+    "id": "vercel",
+    "name": "Vercel"
   },
   {
-    id: "vesper",
-    name: "Vesper",
+    "id": "vesper",
+    "name": "Vesper"
   },
   {
-    id: "zenburn",
-    name: "Zenburn",
-  },
+    "id": "zenburn",
+    "name": "Zenburn"
+  }
 ] as const;

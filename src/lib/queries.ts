@@ -18,6 +18,7 @@ import {
   listSessions,
   createSession,
   deleteSession,
+  renameSession,
   listProviders,
   createProvider,
   updateProvider,
@@ -274,6 +275,17 @@ export function useDeleteSession() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { slug: string; id: string }) => deleteSession(vars.id),
+    onSuccess: (_, vars) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.sessions(vars.slug) });
+    },
+  });
+}
+
+export function useRenameSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { slug: string; id: string; title: string }) =>
+      renameSession(vars.id, vars.title),
     onSuccess: (_, vars) => {
       void qc.invalidateQueries({ queryKey: queryKeys.sessions(vars.slug) });
     },

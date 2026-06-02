@@ -17,14 +17,14 @@ type PrefKey =
   | "telegram_whitelist";
 
 const PREF_TO_LOCAL_KEY: Record<PrefKey, string> = {
-  theme_id: "downy:theme-id",
-  color_scheme: "downy:color-scheme",
+  theme_id: "ylstack-agents-stack:theme-id",
+  color_scheme: "ylstack-agents-stack:color-scheme",
   // Bumped to -v2 alongside src/lib/preferences.ts to invalidate any
   // previously-persisted `"true"` values; default is now OFF.
-  show_thinking: "downy:show-thinking-v2",
-  ai_provider: "downy:ai-provider",
-  telegram_bot_token: "downy:telegram-token",
-  telegram_whitelist: "downy:telegram-whitelist",
+  show_thinking: "ylstack-agents-stack:show-thinking-v2",
+  ai_provider: "ylstack-agents-stack:ai-provider",
+  telegram_bot_token: "ylstack-agents-stack:telegram-token",
+  telegram_whitelist: "ylstack-agents-stack:telegram-whitelist",
 };
 
 const PREF_KEYS = new Set<string>(Object.keys(PREF_TO_LOCAL_KEY));
@@ -78,8 +78,8 @@ export async function hydratePreferencesFromServer(): Promise<void> {
     if (changed) {
       // Same fan-out the per-pref setters use, so subscribed components
       // re-render without a reload.
-      window.dispatchEvent(new Event("downy:theme-change"));
-      window.dispatchEvent(new Event("downy:preference-change"));
+      window.dispatchEvent(new Event("ylstack-agents-stack:theme-change"));
+      window.dispatchEvent(new Event("ylstack-agents-stack:preference-change"));
     }
   } catch (err) {
     // Hydration is best-effort — local values stay if the network fails.

@@ -329,6 +329,14 @@ export async function deleteSession(id: string): Promise<void> {
   await fetch(`/api/sessions/${id}`, { method: "DELETE" });
 }
 
+export async function renameSession(id: string, title: string): Promise<void> {
+  await fetch(`/api/sessions/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+}
+
 // Provider Management
 export async function listProviders(): Promise<any[]> {
   const res = await fetch("/api/providers");

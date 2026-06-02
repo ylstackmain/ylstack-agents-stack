@@ -28,8 +28,8 @@ type Props = {
   agent: AgentSocket;
 };
 
-const COLLAPSED_KEY = "downy:agent-panel-collapsed";
-const COLLAPSED_EVENT = "downy:agent-panel-collapsed-change";
+const COLLAPSED_KEY = "ylstack-agents-stack:agent-panel-collapsed";
+const COLLAPSED_EVENT = "ylstack-agents-stack:agent-panel-collapsed-change";
 
 function readCollapsed(): boolean {
   if (typeof window === "undefined") return false;
@@ -119,7 +119,7 @@ export default function AgentPanel({ agent }: Props) {
         ].join(" ")}
         aria-hidden={!mobileOpen && desktopCollapsed ? true : undefined}
       >
-        {/* Top: Downy identity row + collapse toggle inline. No standalone
+        {/* Top: YLStack identity row + collapse toggle inline. No standalone
             row, so no whitespace band when the panel is open. */}
         <div className="flex items-center justify-between gap-2 px-4 pt-4">
           <Link
@@ -128,7 +128,7 @@ export default function AgentPanel({ agent }: Props) {
             className="min-w-0 truncate text-base font-semibold no-underline hover:opacity-80"
             onClick={closeMobile}
           >
-            Downy
+            YLStack
           </Link>
           <button
             type="button"
@@ -174,7 +174,7 @@ export default function AgentPanel({ agent }: Props) {
             </span>
           </button>
           <IdentitySection onNavigate={closeMobile} />
-          <SessionSwitcher onNavigate={closeMobile} />
+          <SessionSwitcher agent={agent} onNavigate={closeMobile} />
           <WorkspaceSection onNavigate={closeMobile} />
           <SkillsSection onNavigate={closeMobile} />
           <McpSection agent={agent} onNavigate={closeMobile} />

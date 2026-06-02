@@ -411,7 +411,9 @@ export default function InputBox({
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-box">
             <div
               className="absolute inset-x-0 top-0 h-0.5 w-1/2 bg-gradient-to-r from-transparent via-primary to-transparent"
-              style={{ animation: "downy-shimmer 1.6s linear infinite" }}
+              style={{
+                animation: "ylstack-agents-stack-shimmer 1.6s linear infinite",
+              }}
             />
           </div>
         ) : null}

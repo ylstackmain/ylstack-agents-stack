@@ -6,13 +6,21 @@ import {
   useUpdateProvider,
   useDeleteProvider,
 } from "../lib/queries";
-import { type ManagedAiProvider } from "../lib/ai-providers";
-import { fetchProviderModels } from "../lib/api-client";
-import { alertDialog } from "./ui/dialog";
+import { alertDialog, confirmDialog } from "./ui/dialog";
+
+type ManagedAiProvider = {
+  id: string;
+  name: string;
+  type: "openai" | "anthropic" | "google" | "openrouter" | "workers-ai";
+  apiKey: string | null;
+  endpoint: string | null;
+  modelId: string | null;
+  isDefault: boolean;
+  createdAt: number;
+};
 
 export default function AiProvidersCard() {
-  const { data, isLoading } = useProviders();
-  const providers = (data as any)?.providers || [];
+  const { data: providers = [], isLoading } = useProviders();
   const createMut = useCreateProvider();
   const updateMut = useUpdateProvider();
   const deleteMut = useDeleteProvider();
@@ -64,6 +72,20 @@ export default function AiProvidersCard() {
     setFormData(provider);
     setEditingId(provider.id);
     setIsAdding(false);
+  };
+
+  const handleSetDefault = async (id: string) => {
+    const provider = providers.find((p: ManagedAiProvider) => p.id === id);
+    if (!provider) return;
+    if (
+      !(await confirmDialog({
+        title: "Set Default Provider",
+        message: `Make "${provider.name}" the default AI provider?`,
+        confirmLabel: "Set Default",
+      }))
+    )
+      return;
+    await updateMut.mutateAsync({ id, provider: { ...provider, isDefault: true } });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,7 +153,7 @@ export default function AiProvidersCard() {
                   <option value="anthropic">Anthropic</option>
                   <option value="google">Google Gemini</option>
                   <option value="openrouter">OpenRouter</option>
-                  <option value="workers-ai">Cloudflare Workers AI</option>
+                  <option value="workers-ai">Workers AI (D1 stored)</option>
                 </select>
               </div>
               {formData.type !== "workers-ai" && (
@@ -166,9 +188,12 @@ export default function AiProvidersCard() {
                   </div>
                 </>
               )}
-              <div className="form-control">
-                <label className="label text-xs font-bold uppercase opacity-60">
-                  Default Model ID
+              <div className="form-control md:col-span-2">
+                <label className="label text-xs font-bold uppercase opacity-60 flex justify-between">
+                  <span>Model ID(s)</span>
+                  <span className="text-[10px] font-normal normal-case opacity-70">
+                    Comma-separated for fallbacks
+                  </span>
                 </label>
                 <input
                   value={formData.modelId || ""}
@@ -176,7 +201,7 @@ export default function AiProvidersCard() {
                     setFormData({ ...formData, modelId: e.target.value })
                   }
                   className="input input-bordered input-sm"
-                  placeholder="gpt-4o"
+                  placeholder="gpt-4o, claude-3-5-sonnet-latest"
                 />
               </div>
             </div>
@@ -216,6 +241,7 @@ export default function AiProvidersCard() {
             <table className="table table-sm w-full">
               <thead>
                 <tr>
+                  <th className="w-10">Default</th>
                   <th>Name</th>
                   <th>Type</th>
                   <th>Model</th>
@@ -225,13 +251,26 @@ export default function AiProvidersCard() {
               <tbody>
                 {providers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-4 opacity-50">
+                    <td colSpan={5} className="text-center py-4 opacity-50">
                       No providers configured.
                     </td>
                   </tr>
                 ) : (
                   providers.map((p: ManagedAiProvider) => (
-                    <tr key={p.id}>
+                    <tr key={p.id} className="hover:bg-base-200">
+                      <td>
+                        {p.isDefault ? (
+                          <span className="badge badge-success badge-xs">Default</span>
+                        ) : (
+                          <button
+                            onClick={() => void handleSetDefault(p.id)}
+                            className="btn btn-ghost btn-xs btn-square"
+                            title="Set as default"
+                          >
+                            <span className="opacity-0 group-hover:opacity-100">·</span>
+                          </button>
+                        )}
+                      </td>
                       <td className="font-medium">{p.name}</td>
                       <td>
                         <span className="badge badge-sm badge-outline">
@@ -245,12 +284,14 @@ export default function AiProvidersCard() {
                         <button
                           onClick={() => handleEdit(p)}
                           className="btn btn-ghost btn-xs btn-square"
+                          title="Edit"
                         >
                           <Edit2 size={12} />
                         </button>
                         <button
                           onClick={() => deleteMut.mutate(p.id)}
                           className="btn btn-ghost btn-xs btn-square text-error"
+                          title="Delete"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -265,4 +306,12 @@ export default function AiProvidersCard() {
       </div>
     </div>
   );
+}
+
+async function fetchProviderModels(id: string): Promise<string[]> {
+  const res = await fetch(`/api/providers/${id}/fetch-models`, {
+    method: "POST",
+  });
+  const data = (await res.json()) as { models?: string[] } | undefined;
+  return data?.models ?? [];
 }
