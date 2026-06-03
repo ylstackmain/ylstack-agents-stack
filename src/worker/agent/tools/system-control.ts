@@ -6,6 +6,8 @@ import { getAgentByName } from "agents";
 import {
   IDENTITY_PATH,
   SOUL_PATH,
+  generateDynamicSoul,
+  generateDynamicIdentity,
 } from "../core-files";
 
 // We require `agent` to make DO RPC calls and DB calls.
@@ -23,26 +25,39 @@ export function createSystemControlTools(args: {
   return {
     create_agent: tool({
       description:
-        "Create a new sub-agent. The slug must be lowercase, digits, hyphens, starting with a letter. Optional soulContent and identityContent let you configure the agent immediately.",
+        "Create a new sub-agent. The slug must be lowercase, digits, hyphens, starting with a letter. Provide a description to auto-generate personalized SOUL.md and IDENTITY.md, or provide custom soulContent and identityContent instead.",
       inputSchema: z.object({
         slug: z.string().describe("Unique identifier for the agent"),
         displayName: z.string().describe("Human readable name"),
-        soulContent: z.string().optional().describe("Custom SOUL.md content for the sub-agent"),
-        identityContent: z.string().optional().describe("Custom IDENTITY.md content for the sub-agent"),
+        description: z.string().optional().describe("Description of the agent's purpose (used to auto-generate SOUL.md and IDENTITY.md)"),
+        soulContent: z.string().optional().describe("Custom SOUL.md content for the sub-agent (overrides auto-generation)"),
+        identityContent: z.string().optional().describe("Custom IDENTITY.md content for the sub-agent (overrides auto-generation)"),
       }),
-      execute: async ({ slug, displayName, soulContent, identityContent }) => {
+      execute: async ({ slug, displayName, description, soulContent, identityContent }) => {
         try {
           const record = await createAgent(args.env.DB, { slug, displayName });
-          // Seed workspace with initial identity files if provided
-          if (soulContent || identityContent) {
-            const stub = await getPeerStub(slug);
-            if (soulContent) {
-              await stub.writeCoreFile(SOUL_PATH, soulContent);
-            }
-            if (identityContent) {
-              await stub.writeCoreFile(IDENTITY_PATH, identityContent);
-            }
+          const stub = await getPeerStub(slug);
+          
+          // Determine SOUL.md content: custom > auto-generated > skip
+          let finalSoulContent = soulContent;
+          if (!finalSoulContent && description) {
+            finalSoulContent = generateDynamicSoul(displayName, description);
           }
+          
+          // Determine IDENTITY.md content: custom > auto-generated > skip
+          let finalIdentityContent = identityContent;
+          if (!finalIdentityContent && description) {
+            finalIdentityContent = generateDynamicIdentity(displayName, description, slug);
+          }
+          
+          // Write files if available
+          if (finalSoulContent) {
+            await stub.writeCoreFile(SOUL_PATH, finalSoulContent);
+          }
+          if (finalIdentityContent) {
+            await stub.writeCoreFile(IDENTITY_PATH, finalIdentityContent);
+          }
+          
           return { success: true, record };
         } catch (e) {
           return { success: false, error: String(e) };
