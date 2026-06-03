@@ -124,9 +124,16 @@ export function AgentSelector() {
           required: true,
         },
         {
+          name: "description",
+          label: "Agent Purpose (optional)",
+          placeholder: "What is this agent specialized for? (e.g., 'Research specialist for market analysis')",
+          type: "textarea",
+        },
+        {
           name: "identityContent",
-          label: "Identity (optional)",
-          placeholder: "Custom instructions for this agent...",
+          label: "Custom Identity (optional)",
+          placeholder: "Override auto-generated identity with custom instructions...",
+          type: "textarea",
         },
       ],
     });
@@ -136,12 +143,14 @@ export function AgentSelector() {
       return;
     }
 
+    const description = result.description ?? "";
     const identityContent = result.identityContent ?? "";
 
     try {
       const created = await createMut.mutateAsync({
         slug: trimmed,
         displayName: result.displayName || deriveDisplayName(trimmed),
+        description,
         identityContent,
       });
       setCreating(false);

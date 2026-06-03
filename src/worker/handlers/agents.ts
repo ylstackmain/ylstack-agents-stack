@@ -16,6 +16,8 @@ import {
  import {
    IDENTITY_PATH,
    SOUL_PATH,
+   generateDynamicSoul,
+   generateDynamicIdentity,
  } from "../agent/core-files";
 
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -58,18 +60,28 @@ if (request.method === "POST") {
          const raw: unknown = await request.json().catch(() => null);
          const parsed = CreateAgentRequestBodySchema.safeParse(raw);
          if (!parsed.success) {
-           return json({ error: "Body must be { slug, displayName, soulContent?, identityContent? }" }, 400);
+           return json({ error: "Body must be { slug, displayName, description?, soulContent?, identityContent? }" }, 400);
          }
          const record = await createAgent(env.DB, parsed.data);
-         // Seed workspace with initial identity files if provided
-         if (parsed.data.soulContent || parsed.data.identityContent) {
+         // Determine SOUL.md content: custom > auto-generated > skip
+         let finalSoulContent = parsed.data.soulContent;
+         if (!finalSoulContent && parsed.data.description) {
+           finalSoulContent = generateDynamicSoul(parsed.data.displayName, parsed.data.description);
+         }
+         // Determine IDENTITY.md content: custom > auto-generated > skip
+         let finalIdentityContent = parsed.data.identityContent;
+         if (!finalIdentityContent && parsed.data.description) {
+           finalIdentityContent = generateDynamicIdentity(parsed.data.displayName, parsed.data.description, parsed.data.slug);
+         }
+         // Seed workspace with initial identity files if available
+         if (finalSoulContent || finalIdentityContent) {
            try {
              const stub = await getAgentStub(env, `${record.slug}:default`) as DurableObjectStub<DownyAgent>;
-             if (parsed.data.soulContent) {
-               await stub.writeCoreFile(SOUL_PATH, parsed.data.soulContent);
+             if (finalSoulContent) {
+               await stub.writeCoreFile(SOUL_PATH, finalSoulContent);
              }
-             if (parsed.data.identityContent) {
-               await stub.writeCoreFile(IDENTITY_PATH, parsed.data.identityContent);
+             if (finalIdentityContent) {
+               await stub.writeCoreFile(IDENTITY_PATH, finalIdentityContent);
              }
            } catch (e) {
              // Log but don't fail the creation — workspace seeding is best-effort
@@ -95,7 +107,7 @@ if (request.method === "POST") {
         const parsed = UpdateAgentRequestBodySchema.safeParse(raw);
         if (!parsed.success) {
           return json(
-            { error: "Body must be { displayName?, isPrivate? }" },
+            { error: "Body must be { displayName?, description?, isPrivate? }" },
             400,
           );
         }

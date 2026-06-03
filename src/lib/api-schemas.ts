@@ -122,6 +122,7 @@ export const ListAgentsResponseSchema = z.object({
 export const CreateAgentRequestBodySchema = z.object({
    slug: z.string(),
    displayName: z.string(),
+   description: z.string().optional().describe("Agent purpose/description for auto-generating SOUL.md and IDENTITY.md"),
    soulContent: z.string().optional(),
    identityContent: z.string().optional(),
  });
@@ -132,6 +133,7 @@ export const CreateAgentResponseSchema = z.object({
 
 export const UpdateAgentRequestBodySchema = z.object({
   displayName: z.string().optional(),
+  description: z.string().optional().describe("Update agent description"),
   isPrivate: z.boolean().optional(),
 });
 
