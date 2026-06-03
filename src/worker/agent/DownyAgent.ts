@@ -22,7 +22,6 @@ import { DEFAULT_AI_PROVIDER, getModelFor, readAiProvider } from "./get-model";
 import {
   AGENT_CORE_FILES,
   BOOTSTRAP_PATH,
-  BOOTSTRAP_SEED,
   coreFileMeta,
   IDENTITY_PATH,
   isAgentCorePath,
@@ -30,6 +29,7 @@ import {
   isBootstrapPath,
   isCorePath,
   isProfileCorePath,
+  getBootstrapSeed,
   resolveCoreFile,
   type CoreFileRecord,
 } from "./core-files";
@@ -285,7 +285,7 @@ export class DownyAgent extends Think {
       userFile.content,
       peers,
       latestPlan,
-      this.slug === "default",
+      this.slug,
     );
     const mcpTools = toolRegistry.buildMcpProxyTools({
       descriptors: listMcpToolDescriptors(this.mcp),
@@ -436,7 +436,9 @@ export class DownyAgent extends Think {
   async #seedBootstrapOnce(): Promise<void> {
     const seeded = await this.ctx.storage.get<boolean>(BOOTSTRAP_SEEDED_KEY);
     if (seeded === true) return;
-    await this.workspace.writeFile(BOOTSTRAP_PATH, BOOTSTRAP_SEED);
+    const record = await getAgent(this.env.DB, this.slug);
+    const displayName = record?.displayName ?? this.slug;
+    await this.workspace.writeFile(BOOTSTRAP_PATH, getBootstrapSeed(this.slug, displayName));
     await this.ctx.storage.put(BOOTSTRAP_SEEDED_KEY, true);
   }
 
@@ -508,7 +510,7 @@ export class DownyAgent extends Think {
 
   async listCoreFiles(): Promise<CoreFileRecord[]> {
     return Promise.all(
-      AGENT_CORE_FILES.map((meta) => resolveCoreFile(this.workspace, meta)),
+      AGENT_CORE_FILES.map((meta) => resolveCoreFile(this.workspace, meta, this.slug)),
     );
   }
 
@@ -520,7 +522,7 @@ export class DownyAgent extends Think {
     }
     const meta = coreFileMeta(path);
     if (!meta || !isAgentCorePath(path)) return null;
-    return resolveCoreFile(this.workspace, meta);
+    return resolveCoreFile(this.workspace, meta, this.slug);
   }
 
   async writeCoreFile(path: string, content: string): Promise<void> {

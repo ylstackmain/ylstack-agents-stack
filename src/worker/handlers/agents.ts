@@ -1,16 +1,22 @@
 import {
-  CreateAgentRequestBodySchema,
-  UpdateAgentRequestBodySchema,
-} from "../../lib/api-schemas";
-import {
-  archiveAgent,
-  createAgent,
-  getAgent,
-  listAgents,
-  renameAgent,
-  setAgentPrivate,
-  unarchiveAgent,
-} from "../db/profile";
+   CreateAgentRequestBodySchema,
+   UpdateAgentRequestBodySchema,
+ } from "../../lib/api-schemas";
+ import {
+   archiveAgent,
+   createAgent,
+   getAgent,
+   listAgents,
+   renameAgent,
+   setAgentPrivate,
+   unarchiveAgent,
+ } from "../db/profile";
+ import { getAgentStub } from "../lib/get-agent";
+ import type { DownyAgent } from "../agent/DownyAgent";
+ import {
+   IDENTITY_PATH,
+   SOUL_PATH,
+ } from "../agent/core-files";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
@@ -48,15 +54,33 @@ export async function handleAgentsRequest(
         const agents = await listAgents(env.DB, { includeArchived });
         return json({ agents });
       }
-      if (request.method === "POST") {
-        const raw: unknown = await request.json().catch(() => null);
-        const parsed = CreateAgentRequestBodySchema.safeParse(raw);
-        if (!parsed.success) {
-          return json({ error: "Body must be { slug, displayName }" }, 400);
-        }
-        const agent = await createAgent(env.DB, parsed.data);
-        return json({ agent }, 201);
-      }
+if (request.method === "POST") {
+         const raw: unknown = await request.json().catch(() => null);
+         const parsed = CreateAgentRequestBodySchema.safeParse(raw);
+         if (!parsed.success) {
+           return json({ error: "Body must be { slug, displayName, soulContent?, identityContent? }" }, 400);
+         }
+         const record = await createAgent(env.DB, parsed.data);
+         // Seed workspace with initial identity files if provided
+         if (parsed.data.soulContent || parsed.data.identityContent) {
+           try {
+             const stub = await getAgentStub(env, `${record.slug}:default`) as DurableObjectStub<DownyAgent>;
+             if (parsed.data.soulContent) {
+               await stub.writeCoreFile(SOUL_PATH, parsed.data.soulContent);
+             }
+             if (parsed.data.identityContent) {
+               await stub.writeCoreFile(IDENTITY_PATH, parsed.data.identityContent);
+             }
+           } catch (e) {
+             // Log but don't fail the creation — workspace seeding is best-effort
+             console.warn("Failed to seed workspace for new agent", {
+               slug: record.slug,
+               error: e instanceof Error ? e.message : String(e),
+             });
+           }
+         }
+         return json({ agent: record }, 201);
+       }
       return json({ error: "Method not allowed" }, 405);
     }
 

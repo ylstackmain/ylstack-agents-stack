@@ -3,6 +3,10 @@ import { z } from "zod";
 import { createAgent, archiveAgent } from "../../db/profile";
 import type { DownyAgent } from "../DownyAgent";
 import { getAgentByName } from "agents";
+import {
+  IDENTITY_PATH,
+  SOUL_PATH,
+} from "../core-files";
 
 // We require `agent` to make DO RPC calls and DB calls.
 export function createSystemControlTools(args: {
@@ -19,14 +23,26 @@ export function createSystemControlTools(args: {
   return {
     create_agent: tool({
       description:
-        "Create a new sub-agent. The slug must be lowercase, digits, hyphens, starting with a letter.",
+        "Create a new sub-agent. The slug must be lowercase, digits, hyphens, starting with a letter. Optional soulContent and identityContent let you configure the agent immediately.",
       inputSchema: z.object({
         slug: z.string().describe("Unique identifier for the agent"),
         displayName: z.string().describe("Human readable name"),
+        soulContent: z.string().optional().describe("Custom SOUL.md content for the sub-agent"),
+        identityContent: z.string().optional().describe("Custom IDENTITY.md content for the sub-agent"),
       }),
-      execute: async ({ slug, displayName }) => {
+      execute: async ({ slug, displayName, soulContent, identityContent }) => {
         try {
           const record = await createAgent(args.env.DB, { slug, displayName });
+          // Seed workspace with initial identity files if provided
+          if (soulContent || identityContent) {
+            const stub = await getPeerStub(slug);
+            if (soulContent) {
+              await stub.writeCoreFile(SOUL_PATH, soulContent);
+            }
+            if (identityContent) {
+              await stub.writeCoreFile(IDENTITY_PATH, identityContent);
+            }
+          }
           return { success: true, record };
         } catch (e) {
           return { success: false, error: String(e) };

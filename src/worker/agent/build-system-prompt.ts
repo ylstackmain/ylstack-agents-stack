@@ -125,18 +125,22 @@ function renderPeersSection(peers: readonly AgentRecord[]): string | null {
  * because it's user-level, shared across every agent. `peers` is the list of
  * other active agents the user has, used to render the `## Peer agents`
  * section so the model knows valid `read_peer_agent` slugs.
+ *
+ * `slug` is used to determine which template to use for identity files
+ * (Lead Agent vs sub-agent templates) and whether to include Lead Agent
+ * system instructions.
  */
 export async function buildSystemPrompt(
   workspace: Workspace,
   userFileContent: string,
   peers: readonly AgentRecord[] = [],
   latestPlan: ActivePlan | null = null,
-  isLeadAgent: boolean = false,
+  slug: string,
 ): Promise<string> {
   const [soul, identity, memory, bootstrap, skills] = await Promise.all([
-    resolveCoreFile(workspace, metaFor(SOUL_PATH)),
-    resolveCoreFile(workspace, metaFor(IDENTITY_PATH)),
-    resolveCoreFile(workspace, metaFor(MEMORY_PATH)),
+    resolveCoreFile(workspace, metaFor(SOUL_PATH), slug),
+    resolveCoreFile(workspace, metaFor(IDENTITY_PATH), slug),
+    resolveCoreFile(workspace, metaFor(MEMORY_PATH), slug),
     workspace.readFile(BOOTSTRAP_PATH),
     listSkills(workspace),
   ]);
@@ -149,7 +153,7 @@ export async function buildSystemPrompt(
     `## MEMORY.md\n${memory.content.trim()}`,
   ];
 
-  if (isLeadAgent) {
+  if (slug === "default") {
     sections.unshift(
       `## LEAD AGENT SYSTEM INSTRUCTIONS
 You are the default Lead Agent of the ylstack agents ecosystem. Your primary responsibility is managing the whole agent ecosystem, including creating, archiving, configuring, and coordinating other sub-agents.

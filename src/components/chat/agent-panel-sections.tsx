@@ -38,6 +38,7 @@ import {
   useWorkspaceFiles,
 } from "../../lib/queries";
 import { queryKeys } from "../../lib/query-keys";
+import { alertDialog, promptDialog } from "../ui/dialog";
 import {
   BACKGROUND_TASK_UPDATED_TYPE,
   BackgroundTaskRecordSchema,
@@ -52,6 +53,14 @@ function deriveDisplayName(slug: string): string {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+function deriveSlugFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30);
 }
 
 export type AgentSocket = {
@@ -102,10 +111,38 @@ export function AgentSelector() {
   async function handleCreate() {
     if (!slugValid || busy) return;
     setCreateError(null);
+    
+    // Open prompt dialog for agent configuration
+    const result = await promptDialog({
+      title: "Create New Agent",
+      submitLabel: "Create",
+      fields: [
+        {
+          name: "displayName",
+          label: "Display Name",
+          placeholder: deriveDisplayName(trimmed),
+          required: true,
+        },
+        {
+          name: "identityContent",
+          label: "Identity (optional)",
+          placeholder: "Custom instructions for this agent...",
+        },
+      ],
+    });
+
+    if (!result) {
+      cancelCreate();
+      return;
+    }
+
+    const identityContent = result.identityContent ?? "";
+
     try {
       const created = await createMut.mutateAsync({
         slug: trimmed,
-        displayName: deriveDisplayName(trimmed),
+        displayName: result.displayName || deriveDisplayName(trimmed),
+        identityContent,
       });
       setCreating(false);
       setDraftSlug("");

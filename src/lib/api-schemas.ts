@@ -120,9 +120,11 @@ export const ListAgentsResponseSchema = z.object({
 });
 
 export const CreateAgentRequestBodySchema = z.object({
-  slug: z.string(),
-  displayName: z.string(),
-});
+   slug: z.string(),
+   displayName: z.string(),
+   soulContent: z.string().optional(),
+   identityContent: z.string().optional(),
+ });
 
 export const CreateAgentResponseSchema = z.object({
   agent: AgentRecordSchema,

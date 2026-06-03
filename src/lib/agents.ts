@@ -53,21 +53,23 @@ async function fetchAgents(opts?: {
 }
 
 async function postAgent(input: {
-  slug: string;
-  displayName: string;
-}): Promise<AgentRecord> {
-  const res = await fetch("/api/agents", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`createAgent failed (${String(res.status)}): ${text}`);
-  }
-  const data = CreateAgentResponseSchema.parse(await res.json());
-  return data.agent;
-}
+   slug: string;
+   displayName: string;
+   soulContent?: string;
+   identityContent?: string;
+ }): Promise<AgentRecord> {
+   const res = await fetch("/api/agents", {
+     method: "POST",
+     headers: { "content-type": "application/json" },
+     body: JSON.stringify(input),
+   });
+   if (!res.ok) {
+     const text = await res.text();
+     throw new Error(`createAgent failed (${String(res.status)}): ${text}`);
+   }
+   const data = CreateAgentResponseSchema.parse(await res.json());
+   return data.agent;
+ }
 
 async function patchAgent(
   slug: string,

@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
-// App-native replacement for window.confirm / window.alert.
+// App-native replacement for window.confirm / window.alert / prompt.
 //
 // Usage:
 //   const ok = await confirmDialog({ message: "Delete this?", tone: "danger" });
 //   if (!ok) return;
+//
+//   const name = await promptDialog({
+//     title: "Agent Name",
+//     placeholder: "research-agent",
+//     fields: [{ label: "Display Name", name: "displayName", required: true }],
+//   });
+//   if (!name) return;
 //
 // Mount <DialogHost/> once at the app root. The imperative API publishes
 // requests through a module-level listener so call sites don't have to thread
@@ -21,6 +28,24 @@ type ConfirmRequest = {
   resolve: (value: boolean) => void;
 };
 
+type PromptField = {
+  name: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+};
+
+type PromptRequest = {
+  kind: "prompt";
+  title: string;
+  message?: string;
+  submitLabel?: string;
+  cancelLabel?: string;
+  tone?: Tone;
+  resolve: (value: Record<string, string> | null) => void;
+  fields: PromptField[];
+};
+
 type AlertRequest = {
   kind: "alert";
   title?: string;
@@ -29,7 +54,7 @@ type AlertRequest = {
   resolve: () => void;
 };
 
-type DialogRequest = ConfirmRequest | AlertRequest;
+type DialogRequest = ConfirmRequest | PromptRequest | AlertRequest;
 
 let listener: ((req: DialogRequest) => void) | null = null;
 
@@ -46,12 +71,33 @@ export function confirmDialog(opts: {
 }): Promise<boolean> {
   return new Promise((resolve) => {
     if (!listener) {
-      // Pre-hydrate or host not mounted — degrade to native so behaviour stays
-      // correct rather than silently dropping the prompt.
       resolve(typeof window !== "undefined" && window.confirm(opts.message));
       return;
     }
     listener({ kind: "confirm", ...opts, resolve });
+  });
+}
+
+export function promptDialog(opts: {
+  title: string;
+  message?: string;
+  submitLabel?: string;
+  cancelLabel?: string;
+  tone?: Tone;
+  fields: PromptField[];
+}): Promise<Record<string, string> | null> {
+  return new Promise((resolve) => {
+    if (!listener) {
+      // Degrade to native prompt for the first field if no host
+      if (typeof window !== "undefined" && opts.fields[0]?.name) {
+        const value = window.prompt(opts.message ?? opts.title) ?? "";
+        resolve({ [opts.fields[0].name]: value });
+        return;
+      }
+      resolve(null);
+      return;
+    }
+    listener({ kind: "prompt", ...opts, resolve });
   });
 }
 
@@ -79,11 +125,19 @@ export function alertDialog(opts: {
 export function DialogHost() {
   const [request, setRequest] = useState<DialogRequest | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  // Survives StrictMode double-invoke: dialog.showModal() throws if the
-  // dialog is already open, so we gate on the native `open` attribute.
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+
   useEffect(() => {
     setListener((req) => {
       setRequest(req);
+      // Initialize field values
+      if (req.kind === "prompt") {
+        const init: Record<string, string> = {};
+        for (const f of req.fields) {
+          init[f.name] = "";
+        }
+        setFieldValues(init);
+      }
     });
     return () => {
       setListener(null);
@@ -99,7 +153,9 @@ export function DialogHost() {
   function settle(result: boolean) {
     if (!request) return;
     if (request.kind === "confirm") request.resolve(result);
-    else request.resolve();
+    else if (request.kind === "prompt") {
+      request.resolve(result ? fieldValues : null);
+    } else request.resolve();
     dialogRef.current?.close();
     setRequest(null);
   }
@@ -121,15 +177,34 @@ export function DialogHost() {
         {request.title ? (
           <h3 className="text-base font-semibold">{request.title}</h3>
         ) : null}
-        <p
-          className={`whitespace-pre-line text-sm text-base-content/75 ${
-            request.title ? "mt-2" : ""
-          }`}
-        >
-          {request.message}
-        </p>
+        {request.kind === "prompt" && request.fields ? (
+          <div className="mt-4 space-y-3">
+            {request.fields.map((f) => (
+              <label key={f.name} className="block">
+                <span className="block text-xs font-medium mb-1">{f.label}</span>
+                <input
+                  className="input input-bordered input-sm w-full"
+                  placeholder={f.placeholder}
+                  value={fieldValues[f.name] ?? ""}
+                  onChange={(e) =>
+                    setFieldValues((v) => ({ ...v, [f.name]: e.target.value }))
+                  }
+                  required={f.required}
+                />
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p
+            className={`whitespace-pre-line text-sm text-base-content/75 ${
+              request.title ? "mt-2" : ""
+            }`}
+          >
+            {request.message}
+          </p>
+        )}
         <div className="modal-action mt-5">
-          {request.kind === "confirm" ? (
+          {request.kind === "confirm" || request.kind === "prompt" ? (
             <>
               <button
                 type="button"
@@ -144,11 +219,22 @@ export function DialogHost() {
                 type="button"
                 className={`${confirmBtnClass} btn-sm`}
                 onClick={() => {
+                  // Validate required fields for prompt
+                  if (
+                    request.kind === "prompt" &&
+                    request.fields.some(
+                      (f) => f.required && !fieldValues[f.name],
+                    )
+                  ) {
+                    return;
+                  }
                   settle(true);
                 }}
                 autoFocus
               >
-                {request.confirmLabel ?? "Confirm"}
+                {request.kind === "prompt"
+                  ? request.submitLabel ?? "Create"
+                  : request.confirmLabel ?? "Confirm"}
               </button>
             </>
           ) : (
@@ -165,10 +251,6 @@ export function DialogHost() {
           )}
         </div>
       </div>
-      {/* Backdrop click closes — native <dialog> emits a `cancel` event which
-          fires `onClose` and routes through settle(false). The bg-* class
-          here paints the ::backdrop area so the modal floats over a tinted
-          surface instead of the bare app background. */}
       <form method="dialog" className="modal-backdrop bg-base-300/60">
         <button type="submit" aria-label="Close">
           close
