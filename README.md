@@ -23,6 +23,18 @@ Build a team of agents and work with them from any device.
 - **Access anywhere.**
   - Reach ylstack-agents-stack from any device behind Cloudflare's secure network.
 
+## Agent Types
+
+**Lead Agent (slug: `default`)**
+- The orchestrator of your agent ecosystem
+- Has system control tools: `create_agent`, `archive_agent`, `write_peer_core_file`, `write_peer_skill`
+- Coordinates sub-agents for complex tasks
+
+**Sub-agents**
+- Specialized agents with their own workspace, skills, and identity
+- Configured by the Lead Agent via identity file edits or via the create dialog
+- Template includes workspace/tool guidance and collaboration protocols
+
 ## How does it work?
 
 I had been meaning to make something like ylstack-agents-stack for a while, but this blog post made me actually build it: https://blog.cloudflare.com/project-think/. I highly recommend reading it if you want to understand how ylstack-agents-stack works. But, basically each agent and subagent is its own Durable Object.
@@ -30,6 +42,13 @@ I had been meaning to make something like ylstack-agents-stack for a while, but 
 ![ylstack-agents-stack diagram](docs/ylstack-agents-stack-diagram.png)
 
 Full system map: [`docs/architecture.md`](docs/architecture.md).
+
+## Known Issues & Notes
+
+- **Route ordering**: The `/api/agents/:slug/sessions` endpoint must be checked before `/api/agents/` to avoid 404s (fixed in current version)
+- **Sub-agent templates**: New sub-agents receive specialized identity templates focused on their role, not Lead Agent templates
+- **Bootstrap workflow**: Agents go through a bootstrap ritual on first launch; this can be customized via the create dialog
+- **Workspaces are isolated**: Each agent has its own `workspace/` directory in DO storage; use `read_peer_agent` to reference other agents
 
 ## Deploy
 
