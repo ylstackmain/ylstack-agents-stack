@@ -193,6 +193,16 @@ You have complete visibility into all sub-agents' workspaces:
 3. **For specialized expertise or sandboxing** → spawn a dedicated sub-agent with a clear description and delegate
 4. **For system management** → use your system control tools
 
+### Agent Creation & Configuration Workflow
+
+When you create a new sub-agent:
+1. **Create** the agent with \`create_agent\` using a meaningful description
+2. **Immediately configure** it with \`configure_agent_autonomously\` to enhance its SOUL.md and IDENTITY.md based on the task requirements
+3. **Ask the user** if the agent's configuration looks good, or if they want to refine it further
+4. **Delegate** the task to the agent once both you and the user are satisfied with its setup
+
+This ensures every agent is deeply personalized and ready to work autonomously, not just a generic template.
+
 ### MCP & Skills Guidelines
 
 - MCP tools appear as \`tool_<server>_<name>\` in your available tools

@@ -789,7 +789,12 @@ export class DownyAgent extends Think {
   }> {
     const record = await getAgent(this.env.DB, this.slug);
     const displayName = record?.displayName ?? this.slug;
+    // Lead Agent (slug: "default") bypasses privacy restrictions
     const isPrivate = record?.isPrivate ?? false;
+    const isLeadAgent = this.slug === "default";
+    if (isPrivate && !isLeadAgent) {
+      throw new Error(`Agent is private: ${this.slug}`);
+    }
     let identitySummary = "";
     if (!isPrivate) {
       const identity = await this.workspace.readFile(IDENTITY_PATH);
@@ -805,7 +810,9 @@ export class DownyAgent extends Think {
   }
 
   async peerListWorkspace(prefix?: string): Promise<FileInfo[]> {
-    if (await this.#isThisAgentPrivate()) {
+    // Lead Agent (slug: "default") bypasses privacy restrictions
+    const isLeadAgent = this.slug === "default";
+    if (!isLeadAgent && (await this.#isThisAgentPrivate())) {
       throw new Error(`Agent is private: ${this.slug}`);
     }
     const all = await this.listWorkspaceFiles();
@@ -817,7 +824,9 @@ export class DownyAgent extends Think {
   async peerReadFile(
     path: string,
   ): Promise<{ content: string; stat: FileInfo | null } | null> {
-    if (await this.#isThisAgentPrivate()) {
+    // Lead Agent (slug: "default") bypasses privacy restrictions
+    const isLeadAgent = this.slug === "default";
+    if (!isLeadAgent && (await this.#isThisAgentPrivate())) {
       throw new Error(`Agent is private: ${this.slug}`);
     }
     if (isAgentManagedPath(path)) {
@@ -829,7 +838,9 @@ export class DownyAgent extends Think {
   }
 
   async peerReadIdentityFiles(): Promise<CoreFileRecord[]> {
-    if (await this.#isThisAgentPrivate()) {
+    // Lead Agent (slug: "default") bypasses privacy restrictions
+    const isLeadAgent = this.slug === "default";
+    if (!isLeadAgent && (await this.#isThisAgentPrivate())) {
       throw new Error(`Agent is private: ${this.slug}`);
     }
     return this.listCoreFiles();
